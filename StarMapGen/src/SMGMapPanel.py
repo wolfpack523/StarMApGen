@@ -1,8 +1,5 @@
 import wx
 import wx.svg
-#import wx.event
-import wx.lib.wxcairo
-import cairocffi
 
 class SMGMapPanel(wx.Panel):
 	"""A panel to hold and display the generated map"""
@@ -13,21 +10,29 @@ class SMGMapPanel(wx.Panel):
 		self.mapFile = "BannerMap.svg"
 		self.img = wx.svg.SVGimage.CreateFromFile(self.mapFile)
 		ratio=w/h
-		self.SetMinSize(wx.Size(400*ratio,400))
+		self.SetMinSize(wx.Size(round(400 * ratio), 400))
 
 		self.Bind(wx.EVT_PAINT,self.onPaint)
 
 	def onPaint(self, event):
 		dc = wx.PaintDC(self)
-		dc.SetBackground(wx.Brush('black'))
+		dc.SetBackground(wx.Brush("black"))
 		dc.Clear()
 
 		self.computeScale()
-		
-		gr = wx.GraphicsRenderer.GetCairoRenderer()
-		ctx = gr.CreateContext(dc)
+
+		renderer = wx.GraphicsRenderer.GetDirect2DRenderer()
+
+		if renderer is None:
+			renderer = wx.GraphicsRenderer.GetDefaultRenderer()
+
+		ctx = renderer.CreateContext(dc)
+
+		if ctx is None:
+			return
+
 		self.img.RenderToGC(ctx, self.scale)
-	
+
 	def setMap(self,file):
 		self.img = wx.svg.SVGimage.CreateFromFile(file)
 		self.computeScale()

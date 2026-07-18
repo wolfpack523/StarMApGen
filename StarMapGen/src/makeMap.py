@@ -397,7 +397,7 @@ def getStarOffsetList(n):
 def writeMapHeader(f,w,h):
 	f.write(r'<?xml version="1.0" encoding="UTF-8" standalone="no"?>')
 	f.write("\n")
-	f.write(r'<svg xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:cc="http://creativecommons.org/ns#" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ')
+	f.write(r'<svg xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:cc="http://creativecommons.org/ns#" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" viewBox="0 0 ')
 	params = "%u %u" % (w,h)
 	f.write(params)
 	f.write ('" width="%d" height="%d"' % (w/p2mm,h/p2mm))
