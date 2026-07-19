@@ -1,48 +1,136 @@
+import re
+from html import escape
+from pathlib import Path
+
 import wx
-import wx.svg
+import wx.html2
+
 
 class SMGMapPanel(wx.Panel):
-	"""A panel to hold and display the generated map"""
+    """Display the generated map using a browser-based SVG renderer."""
 
-	def __init__(self,parent,w=20,h=20):
-		super(SMGMapPanel,self).__init__(parent)
-		
-		self.mapFile = "BannerMap.svg"
-		self.img = wx.svg.SVGimage.CreateFromFile(self.mapFile)
-		ratio=w/h
-		self.SetMinSize(wx.Size(round(400 * ratio), 400))
+    def __init__(self, parent, w=20, h=20):
+        super().__init__(parent)
 
-		self.Bind(wx.EVT_PAINT,self.onPaint)
+        ratio = w / h
+        self.SetMinSize(
+            wx.Size(
+                round(400 * ratio),
+                400,
+            )
+        )
 
-	def onPaint(self, event):
-		dc = wx.PaintDC(self)
-		dc.SetBackground(wx.Brush("black"))
-		dc.Clear()
+        self.webView = wx.html2.WebView.New(self)
 
-		self.computeScale()
+        if self.webView is None:
+            raise RuntimeError(
+                "No WebView backend is available. "
+                "On Windows, make sure the Microsoft Edge "
+                "WebView2 Runtime is installed."
+            )
 
-		renderer = wx.GraphicsRenderer.GetDirect2DRenderer()
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(
+            self.webView,
+            1,
+            wx.EXPAND,
+        )
 
-		if renderer is None:
-			renderer = wx.GraphicsRenderer.GetDefaultRenderer()
+        self.SetSizer(sizer)
 
-		ctx = renderer.CreateContext(dc)
+        # Delay the initial load until the native WebView exists.
+        wx.CallAfter(
+            self.setMap,
+            "BannerMap.svg",
+        )
 
-		if ctx is None:
-			return
+    def setMap(self, file):
+        """Load and display an SVG file."""
 
-		self.img.RenderToGC(ctx, self.scale)
+        svgPath = Path(file).resolve()
 
-	def setMap(self,file):
-		self.img = wx.svg.SVGimage.CreateFromFile(file)
-		self.computeScale()
+        if not svgPath.is_file():
+            self.showError(
+                f"SVG file not found:\n{svgPath}"
+            )
+            return
 
-	def computeScale(self):
-		scale1 = self.Size.width/self.img.width
-		scale2 = self.Size.height/self.img.height
-		self.scale = min(scale1,scale2)
-		width = int(self.img.width * self.scale)
-		height = int(self.img.height * self.scale)
-#		print (self.scale, width,height)
-		self.SetSize(wx.Size(width,height))
-		
+        try:
+            svg = svgPath.read_text(
+                encoding="utf-8-sig"
+            )
+        except OSError as error:
+            self.showError(
+                f"Could not read SVG file:\n{error}"
+            )
+            return
+
+        # The XML declaration is valid in a standalone SVG file,
+        # but not when the SVG is inserted into an HTML document.
+        svg = re.sub(
+            r"^\s*<\?xml[^>]*\?>",
+            "",
+            svg,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+
+        html = f"""<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+
+    <style>
+        html,
+        body {{
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }}
+
+        body {{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+
+        svg {{
+            display: block;
+            width: 100%;
+            height: 100%;
+        }}
+    </style>
+</head>
+
+<body>
+{svg}
+</body>
+</html>
+"""
+
+        self.webView.SetPage(
+            html,
+            svgPath.parent.as_uri() + "/",
+        )
+
+    def showError(self, message):
+        """Display an error inside the preview area."""
+
+        self.webView.SetPage(
+            f"""<!doctype html>
+<html>
+<body style="
+    margin: 0;
+    padding: 20px;
+    background: #000;
+    color: #fff;
+    font-family: sans-serif;
+">
+    {escape(message)}
+</body>
+</html>
+""",
+            "",
+        )
