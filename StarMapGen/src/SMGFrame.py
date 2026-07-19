@@ -866,8 +866,8 @@ class SMGFrame(wx.Frame):
         """Load one star system into the editor."""
 
         if (
-            index == wx.NOT_FOUND
-            or not 0 <= index < len(self.starList)
+                index == wx.NOT_FOUND
+                or not 0 <= index < len(self.starList)
         ):
             self.clearSystemDetails()
             return
@@ -999,8 +999,8 @@ class SMGFrame(wx.Frame):
 
         if self.starList:
             if (
-                returnIndex == wx.NOT_FOUND
-                or returnIndex >= len(self.starList)
+                    returnIndex == wx.NOT_FOUND
+                    or returnIndex >= len(self.starList)
             ):
                 returnIndex = 0
 
@@ -1102,8 +1102,8 @@ class SMGFrame(wx.Frame):
         index = self.selectedSystemIndex
 
         if (
-            index == wx.NOT_FOUND
-            or not 0 <= index < len(self.starList)
+                index == wx.NOT_FOUND
+                or not 0 <= index < len(self.starList)
         ):
             wx.MessageBox(
                 "Select a star system before applying changes.",
@@ -1200,9 +1200,9 @@ class SMGFrame(wx.Frame):
         system.nStars = len(system.stars)
 
     def validateSystemName(
-        self,
-        value,
-        selectedIndex=wx.NOT_FOUND,
+            self,
+            value,
+            selectedIndex=wx.NOT_FOUND,
     ):
         """Return a valid and unique system name."""
 
@@ -1220,8 +1220,8 @@ class SMGFrame(wx.Frame):
 
         for index, system in enumerate(self.starList):
             if (
-                index != selectedIndex
-                and system.name == name
+                    index != selectedIndex
+                    and system.name == name
             ):
                 raise ValueError(
                     f'A star system named "{name}" already exists.'
@@ -1230,11 +1230,11 @@ class SMGFrame(wx.Frame):
         return name
 
     def parseCoordinate(
-        self,
-        value,
-        label,
-        minimum,
-        maximum,
+            self,
+            value,
+            label,
+            minimum,
+            maximum,
     ):
         """Parse and validate one coordinate."""
 
@@ -1327,10 +1327,10 @@ class SMGFrame(wx.Frame):
         ]
 
     def updateSystemJumps(
-        self,
-        oldName,
-        newName,
-        targetNames,
+            self,
+            oldName,
+            newName,
+            targetNames,
     ):
         """Replace all links belonging to one system."""
 
@@ -1350,15 +1350,15 @@ class SMGFrame(wx.Frame):
         # Keep links that do not belong to the edited system.
         for firstName, secondName in self.jumpList:
             if (
-                firstName in namesToReplace
-                or secondName in namesToReplace
+                    firstName in namesToReplace
+                    or secondName in namesToReplace
             ):
                 continue
 
             if (
-                firstName not in validSystemNames
-                or secondName not in validSystemNames
-                or firstName == secondName
+                    firstName not in validSystemNames
+                    or secondName not in validSystemNames
+                    or firstName == secondName
             ):
                 continue
 
@@ -1374,8 +1374,8 @@ class SMGFrame(wx.Frame):
         # Add the checked links.
         for targetName in targetNames:
             if (
-                targetName == newName
-                or targetName not in validSystemNames
+                    targetName == newName
+                    or targetName not in validSystemNames
             ):
                 continue
 
@@ -1398,9 +1398,9 @@ class SMGFrame(wx.Frame):
         self.jumpList = newJumpList
 
     def normaliseJumpPair(
-        self,
-        firstName,
-        secondName,
+            self,
+            firstName,
+            secondName,
     ):
         """Create a stable representation of an undirected link."""
 
@@ -1544,8 +1544,8 @@ G2, M4, WD
             title="Spectral Type Help",
             size=(560, 620),
             style=(
-                wx.DEFAULT_DIALOG_STYLE
-                | wx.RESIZE_BORDER
+                    wx.DEFAULT_DIALOG_STYLE
+                    | wx.RESIZE_BORDER
             ),
         )
 
@@ -1555,9 +1555,9 @@ G2, M4, WD
             dialog,
             value=helpText,
             style=(
-                wx.TE_MULTILINE
-                | wx.TE_READONLY
-                | wx.TE_RICH2
+                    wx.TE_MULTILINE
+                    | wx.TE_READONLY
+                    | wx.TE_RICH2
             ),
         )
 

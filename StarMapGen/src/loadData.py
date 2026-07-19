@@ -1,23 +1,24 @@
 import re
 from StarSystem import StarSystem
 
-def loadData(fName,param,sysList,cList):
+
+def loadData(fName, param, sysList, cList):
     '''loadData opens the file specified by fName and 
     reads in each of the star systems stored in in the file.
     It also requires the parameter object to be passed in (p).
     The function returns a list of StarSystem objects.
     '''
     try:
-        f = open(fName,'r')
+        f = open(fName, 'r')
     except:
-        print ("Unable to open file")
+        print("Unable to open file")
         exit(1)
 
     for line in f:
-        #read in system name
-        m = re.match('Name:\s*(.*)',line)
-#        l = re.match('Link:\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)',line)
-        l = re.match('Link: "(.*)" "(.*)"',line)
+        # read in system name
+        m = re.match('Name:\s*(.*)', line)
+        #        l = re.match('Link:\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)',line)
+        l = re.match('Link: "(.*)" "(.*)"', line)
         if m:
             s = StarSystem(param, generate=False)
             s.name = m.group(1)
@@ -44,8 +45,8 @@ def loadData(fName,param,sysList,cList):
 
             sysList.append(s)
         elif (l):
-            cList.append((l.group(1),l.group(2)))
+            cList.append((l.group(1), l.group(2)))
         else:
-            print ("No Match")
+            print("No Match")
     f.close()
     return sysList

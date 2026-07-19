@@ -3,6 +3,7 @@ from random import randint
 
 class StarSystem:
     id = 0
+
     def __init__(self, params, generate=True):
         self.x = 0
         self.y = 0
@@ -26,14 +27,14 @@ class StarSystem:
         """Generates random position of star system within x,y,z boundaries
         specified by the map generation parameters
         """
-        self.x = randint(1,self.mParams['maxX'])
-        self.y = randint(1,self.mParams['maxY'])
-        self.z = randint(self.mParams['minZ'],self.mParams['maxZ'])
-        self.mapPos = (self.x,self.y)
-#        self.name = ("OFS-%03d%03d%03d"%(self.x,self.y,self.z))
-        self.name = ("S%03d"%(StarSystem.id))
+        self.x = randint(1, self.mParams['maxX'])
+        self.y = randint(1, self.mParams['maxY'])
+        self.z = randint(self.mParams['minZ'], self.mParams['maxZ'])
+        self.mapPos = (self.x, self.y)
+        #        self.name = ("OFS-%03d%03d%03d"%(self.x,self.y,self.z))
+        self.name = ("S%03d" % (StarSystem.id))
         StarSystem.id += 1
-        
+
     def _generateMultiplicity(self):
         """Determines the number of stars in the system based on standard
         stellar distribution numbers
@@ -44,8 +45,8 @@ class StarSystem:
         
         and only goes up to 10 stars in a system
         """
-        roll = randint(1,1000)
-#        roll = 1000
+        roll = randint(1, 1000)
+        #        roll = 1000
         if (561 > roll):
             self.nStars = 1
         elif (921 > roll):
@@ -57,8 +58,8 @@ class StarSystem:
         elif (1000 > roll):
             self.nStars = 5
         else:
-            r2 = randint(1,1000)
-#            r2 = 1000
+            r2 = randint(1, 1000)
+            #            r2 = 1000
             if (811 > r2):
                 self.nStars = 6
             elif (965 > r2):
@@ -69,56 +70,56 @@ class StarSystem:
                 self.nStars = 9
             else:
                 self.nStars = 10
-    
-    def _getMSSubType(self,spClass):
+
+    def _getMSSubType(self, spClass):
         """Calculates the spectral subtype (0-9) for main sequence stars.
 
         This is based roughly on the Kroupa IMF function and could be refined
         """
-        roll = randint(1,100)
-        set1 = ['A','F','G','K','M']
+        roll = randint(1, 100)
+        set1 = ['A', 'F', 'G', 'K', 'M']
         if spClass in set1:
             if (9 > roll):
-                return spClass+"0"
+                return spClass + "0"
             elif (18 > roll):
-                return spClass+"1"
+                return spClass + "1"
             elif (27 > roll):
-                return spClass+"2"
+                return spClass + "2"
             elif (36 > roll):
-                return spClass+"3"
+                return spClass + "3"
             elif (46 > roll):
-                return spClass+"4"
+                return spClass + "4"
             elif (56 > roll):
-                return spClass+"5"
+                return spClass + "5"
             elif (67 > roll):
-                return spClass+"6"
+                return spClass + "6"
             elif (78 > roll):
-                return spClass+"7"
+                return spClass + "7"
             elif (89 > roll):
-                return spClass+"8"
+                return spClass + "8"
             else:
-                return spClass+"9"
+                return spClass + "9"
         if (spClass == "B"):
             if (5 > roll):
-                return spClass+"0"
+                return spClass + "0"
             elif (11 > roll):
-                return spClass+"1"
+                return spClass + "1"
             elif (17 > roll):
-                return spClass+"2"
+                return spClass + "2"
             elif (22 > roll):
-                return spClass+"3"
+                return spClass + "3"
             elif (29 > roll):
-                return spClass+"4"
+                return spClass + "4"
             elif (38 > roll):
-                return spClass+"5"
+                return spClass + "5"
             elif (49 > roll):
-                return spClass+"6"
+                return spClass + "6"
             elif (63 > roll):
-                return spClass+"7"
+                return spClass + "7"
             elif (80 > roll):
-                return spClass+"8"
+                return spClass + "8"
             else:
-                return spClass+"9"
+                return spClass + "9"
         if (spClass == "O"):
             if (13 > roll):
                 return "O5"
@@ -131,7 +132,6 @@ class StarSystem:
             else:
                 return "O9"
 
-                
     def _generateSpectralType(self):
         """Determines the spectral type of each star in the system.
         
@@ -142,10 +142,10 @@ class StarSystem:
         for the original Frontier Space game in 2008.  It should be updated
         to reflect the updated research
         """
-        
+
         for i in range(self.nStars):
-            roll = randint(1,100)
-#            roll = randint(84,100)
+            roll = randint(1, 100)
+            #            roll = randint(84,100)
             if (9 > roll):
                 self.stars.append("BD")
             elif (83 > roll):
@@ -159,26 +159,26 @@ class StarSystem:
             elif (100 > roll):
                 self.stars.append("WD")
             else:
-                r2 = randint(1,1000)
+                r2 = randint(1, 1000)
                 if (584 > r2):
                     self.stars.append(self._getMSSubType("A"))
                 elif (667 > r2):
                     self.stars.append(self._getMSSubType("B"))
-                elif (1000 > r2): #giants
-                    self.stars.append(self._getGiantSpectralType()+"III")
+                elif (1000 > r2):  # giants
+                    self.stars.append(self._getGiantSpectralType() + "III")
                 else:
-                    r4 = randint(1,100)
+                    r4 = randint(1, 100)
                     if (10 > r4):
                         self.stars.append(self._getMSSubType("O"))
                     elif (100 > r4):
-                        self.stars.append(self._getGiantSpectralType()+"I")
+                        self.stars.append(self._getGiantSpectralType() + "I")
                     else:
-                        r5 = randint(1,10)
+                        r5 = randint(1, 10)
                         if (10 == r5):
-                            print ("Made a black hole")
+                            print("Made a black hole")
                             self.stars.append("BH")
                         else:
-                            print ("Made a neutron star")
+                            print("Made a neutron star")
                             self.stars.append("NS")
 
     def _getGiantSpectralType(self):
@@ -187,40 +187,40 @@ class StarSystem:
         The calling function should append the appropriate class identifier
         (i.e. "I" or "III" to the returned value.
         """
-        roll = randint(1,100)
+        roll = randint(1, 100)
         if (83 > roll):
-            return "M%d" % randint(0,9)
+            return "M%d" % randint(0, 9)
         elif (90 > roll):
-            return "K%d" % randint(0,9)
+            return "K%d" % randint(0, 9)
         elif (93 > roll):
-            return "G%d" % randint(0,9)
+            return "G%d" % randint(0, 9)
         elif (95 > roll):
-            return "F%d" % randint(0,9)
+            return "F%d" % randint(0, 9)
         else:
-            return "K%d" % randint(0,9)
-    
+            return "K%d" % randint(0, 9)
+
     def hasHabitable(self):
         for s in self.stars:
             if ("F" == s[0:1] or "G" == s[0:1] or "K" == s[0:1]):
                 return True
         return False
-        
+
+
 if __name__ == '__main__':
-    p = {'maxX':10,'maxY':10,'minZ':-5,'maxZ':5}
+    p = {'maxX': 10, 'maxY': 10, 'minZ': -5, 'maxZ': 5}
     x = StarSystem(p)
-    print ("Name: ",x.name)
-    print ("position = (",x.x,",",x.y,",",x.z,")")
-    print ("map Postion =",x.mapPos)
-    print ("nStars =", x.nStars)
-    print ("stars =", x.stars,"\n")
-    
+    print("Name: ", x.name)
+    print("position = (", x.x, ",", x.y, ",", x.z, ")")
+    print("map Postion =", x.mapPos)
+    print("nStars =", x.nStars)
+    print("stars =", x.stars, "\n")
+
     y = StarSystem(p)
-    print ("Name: ",y.name)
-    print ("position = (",y.x,",",y.y,",",y.z,")")
-    print ("map Postion =",y.mapPos)
-    print ("nStars =", y.nStars)
-    print ("stars =", y.stars)
-    
+    print("Name: ", y.name)
+    print("position = (", y.x, ",", y.y, ",", y.z, ")")
+    print("map Postion =", y.mapPos)
+    print("nStars =", y.nStars)
+    print("stars =", y.stars)
+
     if (x.mapPos == y.mapPos):
-        print ("Overlapping Star Systems")
-    
+        print("Overlapping Star Systems")
