@@ -889,7 +889,6 @@ class SMGFrame(wx.Frame):
             5,
         )
 
-
         editorButtonSizer = wx.BoxSizer(wx.HORIZONTAL)
 
         self.newSystemButton = wx.Button(
@@ -906,6 +905,25 @@ class SMGFrame(wx.Frame):
 
         editorButtonSizer.Add(
             self.newSystemButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.deleteSystemButton = wx.Button(
+            parent,
+            label="Delete System",
+        )
+
+        self.deleteSystemButton.Bind(
+            wx.EVT_BUTTON,
+            self.deleteSelectedSystem,
+        )
+
+        self.deleteSystemButton.Disable()
+
+        editorButtonSizer.Add(
+            self.deleteSystemButton,
             0,
             wx.RIGHT,
             5,
@@ -1129,6 +1147,7 @@ class SMGFrame(wx.Frame):
             "Apply Changes"
         )
         self.applySystemButton.Enable()
+        self.deleteSystemButton.Enable()
 
     def refreshJumpEditor(self, systemName):
         """Display the jump links belonging to one system."""
@@ -1210,6 +1229,7 @@ class SMGFrame(wx.Frame):
 
         self.systemList.Disable()
         self.newSystemButton.Disable()
+        self.deleteSystemButton.Disable()
         self.cancelSystemButton.Enable()
 
         self.applySystemButton.SetLabel(
@@ -1580,6 +1600,7 @@ class SMGFrame(wx.Frame):
         self.editJumpButton.Disable()
         self.removeJumpButton.Disable()
 
+        self.cancelSystemButton.Disable()
         self.applySystemButton.Disable()
         self.cancelSystemButton.Disable()
 
@@ -1807,7 +1828,6 @@ G2, M4, WD
         self.updateJumpButtons()
         event.Skip()
 
-
     def updateJumpButtons(self):
         systemName = self.getCurrentSystemName()
 
@@ -1827,7 +1847,6 @@ G2, M4, WD
         self.editJumpButton.Enable(canEdit)
         self.removeJumpButton.Enable(canEdit)
 
-
     def getCurrentSystemName(self):
         if self.isCreatingSystem:
             return None
@@ -1841,7 +1860,6 @@ G2, M4, WD
             return None
 
         return self.starList[index].name
-
 
     def getSelectedJumpLink(self):
         selectedRow = (
@@ -1857,7 +1875,6 @@ G2, M4, WD
             return None
 
         return self.displayedJumpLinks[selectedRow]
-
 
     def getAvailableJumpTargets(
             self,
@@ -1889,7 +1906,6 @@ G2, M4, WD
             key=str.casefold,
         )
 
-
     def addJumpLink(self, event):
         systemName = self.getCurrentSystemName()
 
@@ -1903,7 +1919,7 @@ G2, M4, WD
                 "There are no unconnected star systems.",
                 "Add Jump Link",
                 wx.OK | wx.ICON_INFORMATION,
-                )
+            )
             return
 
         dialog = JumpLinkDialog(
@@ -1935,7 +1951,6 @@ G2, M4, WD
         self.SetStatusText(
             f'Jump link to "{targetName}" was added.'
         )
-
 
     def editJumpLink(self, event):
         systemName = self.getCurrentSystemName()
@@ -1980,7 +1995,6 @@ G2, M4, WD
             f'Jump link to "{targetName}" was updated.'
         )
 
-
     def removeJumpLink(self, event):
         systemName = self.getCurrentSystemName()
         jump = self.getSelectedJumpLink()
@@ -1998,7 +2012,7 @@ G2, M4, WD
             wx.YES_NO
             | wx.NO_DEFAULT
             | wx.ICON_QUESTION,
-            )
+        )
 
         if result != wx.YES:
             return
@@ -2010,4 +2024,94 @@ G2, M4, WD
 
         self.SetStatusText(
             f'Jump link to "{targetName}" was removed.'
+        )
+
+    def deleteSelectedSystem(self, event):
+        """Delete the selected star system and all of its jump links."""
+
+        if self.isCreatingSystem:
+            return
+
+        index = self.selectedSystemIndex
+
+        if (
+                index == wx.NOT_FOUND
+                or not 0 <= index < len(self.starList)
+        ):
+            wx.MessageBox(
+                "Select a star system before deleting it.",
+                "No Star System Selected",
+                wx.OK | wx.ICON_INFORMATION,
+            )
+            return
+
+        system = self.starList[index]
+
+        connectedLinks = [
+            jump
+            for jump in self.jumpList
+            if jump.contains(system.name)
+        ]
+
+        message = (
+            f'Delete the star system "{system.name}"?'
+        )
+
+        if connectedLinks:
+            linkWord = (
+                "jump link"
+                if len(connectedLinks) == 1
+                else "jump links"
+            )
+
+            message += (
+                f"\n\n{len(connectedLinks)} {linkWord} "
+                "connected to this system will also be deleted."
+            )
+
+        message += "\n\nThis action cannot be undone."
+
+        result = wx.MessageBox(
+            message,
+            "Delete Star System",
+            wx.YES_NO
+            | wx.NO_DEFAULT
+            | wx.ICON_WARNING,
+        )
+
+        if result != wx.YES:
+            return
+
+        deletedName = system.name
+
+        # Remove every jump link involving the deleted system.
+        self.jumpList = [
+            jump
+            for jump in self.jumpList
+            if not jump.contains(deletedName)
+        ]
+
+        # Remove the actual star system.
+        del self.starList[index]
+
+        self.selectedSystemIndex = wx.NOT_FOUND
+
+        self.saveAndRedrawCurrentMap()
+
+        if self.starList:
+            # Select the next system. If the deleted system was the
+            # final entry, select the new final entry instead.
+            nextIndex = min(
+                index,
+                len(self.starList) - 1,
+            )
+
+            self.refreshSystemEditor(nextIndex)
+        else:
+            self.refreshSystemEditor()
+
+        self.SetStatusText(
+            f'Star system "{deletedName}" and '
+            f"{len(connectedLinks)} connected jump link(s) "
+            "were deleted."
         )
