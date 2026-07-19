@@ -16,6 +16,148 @@ from makeMap import (
 from SMGMapPanel import SMGMapPanel
 from StarSystem import StarSystem
 from writeData import writeConnectionData, writeSystemData
+from JumpLink import JumpLink
+
+JUMP_STATUS_OPTIONS = [
+    (
+        JumpLink.STATUS_NORMAL,
+        "Normal",
+    ),
+    (
+        JumpLink.STATUS_CAUTION,
+        "Caution",
+    ),
+    (
+        JumpLink.STATUS_DANGEROUS,
+        "Dangerous",
+    ),
+    (
+        JumpLink.STATUS_BLOCKED,
+        "Blocked",
+    ),
+]
+
+JUMP_STATUS_LABELS = dict(
+    JUMP_STATUS_OPTIONS
+)
+
+
+class JumpLinkDialog(wx.Dialog):
+    def __init__(
+            self,
+            parent,
+            targetNames,
+            targetName=None,
+            status=JumpLink.STATUS_NORMAL,
+            title="Jump Link",
+    ):
+        super().__init__(
+            parent,
+            title=title,
+        )
+
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
+
+        formSizer = wx.FlexGridSizer(
+            cols=2,
+            vgap=8,
+            hgap=8,
+        )
+
+        formSizer.AddGrowableCol(1, 1)
+
+        formSizer.Add(
+            wx.StaticText(
+                self,
+                label="Target System:",
+            ),
+            0,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        self.targetChoice = wx.Choice(
+            self,
+            choices=targetNames,
+        )
+
+        formSizer.Add(
+            self.targetChoice,
+            1,
+            wx.EXPAND,
+        )
+
+        formSizer.Add(
+            wx.StaticText(
+                self,
+                label="Route Status:",
+            ),
+            0,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        self.statusValues = [
+            value
+            for value, label in JUMP_STATUS_OPTIONS
+        ]
+
+        self.statusChoice = wx.Choice(
+            self,
+            choices=[
+                label
+                for value, label in JUMP_STATUS_OPTIONS
+            ],
+        )
+
+        formSizer.Add(
+            self.statusChoice,
+            1,
+            wx.EXPAND,
+        )
+
+        mainSizer.Add(
+            formSizer,
+            1,
+            wx.ALL | wx.EXPAND,
+            12,
+        )
+
+        buttonSizer = self.CreateButtonSizer(
+            wx.OK | wx.CANCEL
+        )
+
+        mainSizer.Add(
+            buttonSizer,
+            0,
+            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
+            12,
+        )
+
+        self.SetSizerAndFit(mainSizer)
+
+        if targetName in targetNames:
+            self.targetChoice.SetSelection(
+                targetNames.index(targetName)
+            )
+        elif targetNames:
+            self.targetChoice.SetSelection(0)
+
+        if status in self.statusValues:
+            self.statusChoice.SetSelection(
+                self.statusValues.index(status)
+            )
+        else:
+            self.statusChoice.SetSelection(0)
+
+    def getTargetName(self):
+        return self.targetChoice.GetStringSelection()
+
+    def getStatus(self):
+        selection = self.statusChoice.GetSelection()
+
+        if selection == wx.NOT_FOUND:
+            return JumpLink.STATUS_NORMAL
+
+        return self.statusValues[selection]
 
 
 class SMGFrame(wx.Frame):
@@ -627,8 +769,8 @@ class SMGFrame(wx.Frame):
         jumpHint = wx.StaticText(
             parent,
             label=(
-                "Check every system that should be connected "
-                "to the selected system."
+                "Add, edit, or remove jump links and assign "
+                "a route status to each connection."
             ),
         )
 
@@ -641,19 +783,112 @@ class SMGFrame(wx.Frame):
             5,
         )
 
-        self.jumpSystemList = wx.CheckListBox(
+        self.displayedJumpLinks = []
+
+        self.jumpListControl = wx.ListCtrl(
             parent,
-            size=(-1, 110),
+            size=(-1, 120),
+            style=(
+                    wx.LC_REPORT
+                    | wx.LC_SINGLE_SEL
+                    | wx.BORDER_SUNKEN
+            ),
         )
 
-        self.jumpSystemList.Disable()
+        self.jumpListControl.InsertColumn(
+            0,
+            "System",
+            width=190,
+        )
+
+        self.jumpListControl.InsertColumn(
+            1,
+            "Status",
+            width=110,
+        )
+
+        self.jumpListControl.Bind(
+            wx.EVT_LIST_ITEM_SELECTED,
+            self.onJumpSelectionChanged,
+        )
+
+        self.jumpListControl.Bind(
+            wx.EVT_LIST_ITEM_DESELECTED,
+            self.onJumpSelectionChanged,
+        )
+
+        self.jumpListControl.Bind(
+            wx.EVT_LIST_ITEM_ACTIVATED,
+            self.editJumpLink,
+        )
+
+        self.jumpListControl.Disable()
 
         editorSizer.Add(
-            self.jumpSystemList,
+            self.jumpListControl,
             0,
             wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
             5,
         )
+
+        jumpButtonSizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.addJumpButton = wx.Button(
+            parent,
+            label="Add Link",
+        )
+        self.addJumpButton.Bind(
+            wx.EVT_BUTTON,
+            self.addJumpLink,
+        )
+        self.addJumpButton.Disable()
+
+        jumpButtonSizer.Add(
+            self.addJumpButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.editJumpButton = wx.Button(
+            parent,
+            label="Edit Link",
+        )
+        self.editJumpButton.Bind(
+            wx.EVT_BUTTON,
+            self.editJumpLink,
+        )
+        self.editJumpButton.Disable()
+
+        jumpButtonSizer.Add(
+            self.editJumpButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.removeJumpButton = wx.Button(
+            parent,
+            label="Remove Link",
+        )
+        self.removeJumpButton.Bind(
+            wx.EVT_BUTTON,
+            self.removeJumpLink,
+        )
+        self.removeJumpButton.Disable()
+
+        jumpButtonSizer.Add(
+            self.removeJumpButton,
+            0,
+        )
+
+        editorSizer.Add(
+            jumpButtonSizer,
+            0,
+            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.ALIGN_RIGHT,
+            5,
+        )
+
 
         editorButtonSizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -896,41 +1131,59 @@ class SMGFrame(wx.Frame):
         self.applySystemButton.Enable()
 
     def refreshJumpEditor(self, systemName):
-        """Show all possible links for the selected system."""
+        """Display the jump links belonging to one system."""
 
-        connectedSystems = set()
+        self.displayedJumpLinks = []
+        self.jumpListControl.DeleteAllItems()
 
-        if systemName is not None:
-            for firstName, secondName in self.jumpList:
-                if firstName == systemName:
-                    connectedSystems.add(secondName)
-                elif secondName == systemName:
-                    connectedSystems.add(firstName)
+        if systemName is None:
+            self.jumpListControl.Disable()
+            self.updateJumpButtons()
+            return
 
-        self.jumpSystemList.Freeze()
+        displayedLinks = []
 
-        try:
-            self.jumpSystemList.Clear()
+        for jump in self.jumpList:
+            if not jump.contains(systemName):
+                continue
 
-            for system in self.starList:
-                if system.name == systemName:
-                    continue
+            otherName = jump.getOtherSystemName(
+                systemName
+            )
 
-                listIndex = self.jumpSystemList.Append(
-                    system.name
+            if otherName is None:
+                continue
+
+            displayedLinks.append(
+                (
+                    otherName,
+                    jump,
                 )
+            )
 
-                if system.name in connectedSystems:
-                    self.jumpSystemList.Check(
-                        listIndex,
-                        True,
-                    )
-        finally:
-            self.jumpSystemList.Thaw()
-
-        self.jumpSystemList.Enable(
-            bool(self.starList)
+        displayedLinks.sort(
+            key=lambda item: item[0].casefold()
         )
+
+        for otherName, jump in displayedLinks:
+            row = self.jumpListControl.InsertItem(
+                self.jumpListControl.GetItemCount(),
+                otherName,
+            )
+
+            self.jumpListControl.SetItem(
+                row,
+                1,
+                JUMP_STATUS_LABELS.get(
+                    jump.status,
+                    jump.status,
+                ),
+            )
+
+            self.displayedJumpLinks.append(jump)
+
+        self.jumpListControl.Enable()
+        self.updateJumpButtons()
 
     def beginNewSystem(self, event):
         """Switch the editor into creation mode."""
@@ -1066,8 +1319,6 @@ class SMGFrame(wx.Frame):
             self.showValidationError(error)
             return
 
-        checkedLinks = self.getCheckedJumpNames()
-
         system = StarSystem(
             self.params,
             generate=False,
@@ -1081,12 +1332,6 @@ class SMGFrame(wx.Frame):
         self.starList.append(system)
 
         newIndex = len(self.starList) - 1
-
-        self.updateSystemJumps(
-            oldName=None,
-            newName=system.name,
-            targetNames=checkedLinks,
-        )
 
         self.leaveCreateMode()
         self.saveAndRedrawCurrentMap()
@@ -1118,8 +1363,6 @@ class SMGFrame(wx.Frame):
             self.showValidationError(error)
             return
 
-        checkedLinks = self.getCheckedJumpNames()
-
         system = self.starList[index]
         oldName = system.name
 
@@ -1128,11 +1371,12 @@ class SMGFrame(wx.Frame):
             values,
         )
 
-        self.updateSystemJumps(
-            oldName=oldName,
-            newName=system.name,
-            targetNames=checkedLinks,
-        )
+        if oldName != system.name:
+            for jump in self.jumpList:
+                jump.renameSystem(
+                    oldName,
+                    system.name,
+                )
 
         self.saveAndRedrawCurrentMap()
         self.refreshSystemEditor(index)
@@ -1315,100 +1559,6 @@ class SMGFrame(wx.Frame):
             wx.OK | wx.ICON_ERROR,
         )
 
-    def getCheckedJumpNames(self):
-        """Return the names checked in the jump link list."""
-
-        return [
-            self.jumpSystemList.GetString(index)
-            for index in range(
-                self.jumpSystemList.GetCount()
-            )
-            if self.jumpSystemList.IsChecked(index)
-        ]
-
-    def updateSystemJumps(
-            self,
-            oldName,
-            newName,
-            targetNames,
-    ):
-        """Replace all links belonging to one system."""
-
-        namesToReplace = {newName}
-
-        if oldName is not None:
-            namesToReplace.add(oldName)
-
-        validSystemNames = {
-            system.name
-            for system in self.starList
-        }
-
-        newJumpList = []
-        existingPairs = set()
-
-        # Keep links that do not belong to the edited system.
-        for firstName, secondName in self.jumpList:
-            if (
-                    firstName in namesToReplace
-                    or secondName in namesToReplace
-            ):
-                continue
-
-            if (
-                    firstName not in validSystemNames
-                    or secondName not in validSystemNames
-                    or firstName == secondName
-            ):
-                continue
-
-            pair = self.normaliseJumpPair(
-                firstName,
-                secondName,
-            )
-
-            if pair not in existingPairs:
-                newJumpList.append(pair)
-                existingPairs.add(pair)
-
-        # Add the checked links.
-        for targetName in targetNames:
-            if (
-                    targetName == newName
-                    or targetName not in validSystemNames
-            ):
-                continue
-
-            pair = self.normaliseJumpPair(
-                newName,
-                targetName,
-            )
-
-            if pair not in existingPairs:
-                newJumpList.append(pair)
-                existingPairs.add(pair)
-
-        newJumpList.sort(
-            key=lambda pair: (
-                pair[0].casefold(),
-                pair[1].casefold(),
-            )
-        )
-
-        self.jumpList = newJumpList
-
-    def normaliseJumpPair(
-            self,
-            firstName,
-            secondName,
-    ):
-        """Create a stable representation of an undirected link."""
-
-        if firstName.casefold() <= secondName.casefold():
-            return firstName, secondName
-
-        return secondName, firstName
-
     def clearSystemDetails(self):
         """Clear the system editor."""
 
@@ -1422,8 +1572,13 @@ class SMGFrame(wx.Frame):
         self.systemStarCount.SetValue("")
         self.systemSpectralTypes.SetValue("")
 
-        self.jumpSystemList.Clear()
-        self.jumpSystemList.Disable()
+        self.displayedJumpLinks = []
+        self.jumpListControl.DeleteAllItems()
+        self.jumpListControl.Disable()
+
+        self.addJumpButton.Disable()
+        self.editJumpButton.Disable()
+        self.removeJumpButton.Disable()
 
         self.applySystemButton.Disable()
         self.cancelSystemButton.Disable()
@@ -1647,3 +1802,212 @@ G2, M4, WD
         self.Update()
         self.Refresh()
         event.Skip()
+
+    def onJumpSelectionChanged(self, event):
+        self.updateJumpButtons()
+        event.Skip()
+
+
+    def updateJumpButtons(self):
+        systemName = self.getCurrentSystemName()
+
+        canEdit = (
+                systemName is not None
+                and self.getSelectedJumpLink() is not None
+                and not self.isCreatingSystem
+        )
+
+        canAdd = (
+                systemName is not None
+                and bool(self.getAvailableJumpTargets())
+                and not self.isCreatingSystem
+        )
+
+        self.addJumpButton.Enable(canAdd)
+        self.editJumpButton.Enable(canEdit)
+        self.removeJumpButton.Enable(canEdit)
+
+
+    def getCurrentSystemName(self):
+        if self.isCreatingSystem:
+            return None
+
+        index = self.selectedSystemIndex
+
+        if (
+                index == wx.NOT_FOUND
+                or not 0 <= index < len(self.starList)
+        ):
+            return None
+
+        return self.starList[index].name
+
+
+    def getSelectedJumpLink(self):
+        selectedRow = (
+            self.jumpListControl.GetFirstSelected()
+        )
+
+        if (
+                selectedRow == -1
+                or not 0 <= selectedRow < len(
+            self.displayedJumpLinks
+        )
+        ):
+            return None
+
+        return self.displayedJumpLinks[selectedRow]
+
+
+    def getAvailableJumpTargets(
+            self,
+            currentTarget=None,
+    ):
+        systemName = self.getCurrentSystemName()
+
+        if systemName is None:
+            return []
+
+        connectedNames = {
+            jump.getOtherSystemName(systemName)
+            for jump in self.jumpList
+            if jump.contains(systemName)
+        }
+
+        return sorted(
+            [
+                system.name
+                for system in self.starList
+                if (
+                    system.name != systemName
+                    and (
+                            system.name == currentTarget
+                            or system.name not in connectedNames
+                    )
+            )
+            ],
+            key=str.casefold,
+        )
+
+
+    def addJumpLink(self, event):
+        systemName = self.getCurrentSystemName()
+
+        if systemName is None:
+            return
+
+        targetNames = self.getAvailableJumpTargets()
+
+        if not targetNames:
+            wx.MessageBox(
+                "There are no unconnected star systems.",
+                "Add Jump Link",
+                wx.OK | wx.ICON_INFORMATION,
+                )
+            return
+
+        dialog = JumpLinkDialog(
+            self,
+            targetNames,
+            title="Add Jump Link",
+        )
+
+        try:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+
+            targetName = dialog.getTargetName()
+            status = dialog.getStatus()
+        finally:
+            dialog.Destroy()
+
+        self.jumpList.append(
+            JumpLink(
+                systemName,
+                targetName,
+                status,
+            )
+        )
+
+        self.saveAndRedrawCurrentMap()
+        self.refreshJumpEditor(systemName)
+
+        self.SetStatusText(
+            f'Jump link to "{targetName}" was added.'
+        )
+
+
+    def editJumpLink(self, event):
+        systemName = self.getCurrentSystemName()
+        jump = self.getSelectedJumpLink()
+
+        if systemName is None or jump is None:
+            return
+
+        currentTarget = jump.getOtherSystemName(
+            systemName
+        )
+
+        targetNames = self.getAvailableJumpTargets(
+            currentTarget,
+        )
+
+        dialog = JumpLinkDialog(
+            self,
+            targetNames,
+            targetName=currentTarget,
+            status=jump.status,
+            title="Edit Jump Link",
+        )
+
+        try:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+
+            targetName = dialog.getTargetName()
+            status = dialog.getStatus()
+        finally:
+            dialog.Destroy()
+
+        jump.startName = systemName
+        jump.endName = targetName
+        jump.status = status
+
+        self.saveAndRedrawCurrentMap()
+        self.refreshJumpEditor(systemName)
+
+        self.SetStatusText(
+            f'Jump link to "{targetName}" was updated.'
+        )
+
+
+    def removeJumpLink(self, event):
+        systemName = self.getCurrentSystemName()
+        jump = self.getSelectedJumpLink()
+
+        if systemName is None or jump is None:
+            return
+
+        targetName = jump.getOtherSystemName(
+            systemName
+        )
+
+        result = wx.MessageBox(
+            f'Remove the jump link to "{targetName}"?',
+            "Remove Jump Link",
+            wx.YES_NO
+            | wx.NO_DEFAULT
+            | wx.ICON_QUESTION,
+            )
+
+        if result != wx.YES:
+            return
+
+        self.jumpList.remove(jump)
+
+        self.saveAndRedrawCurrentMap()
+        self.refreshJumpEditor(systemName)
+
+        self.SetStatusText(
+            f'Jump link to "{targetName}" was removed.'
+        )

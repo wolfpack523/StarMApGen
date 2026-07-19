@@ -1,27 +1,53 @@
-def writeSystemData(params, sList):
-    f = open(params['datafile'], 'w')
-    for system in sList:
-        f.write('Name: %s\n' % system.name)
-        f.write("Coordinates: (%d,%d,%d)\n" % (system.x, system.y, system.z))
-        f.write("Number of Stars: %d\n" % system.nStars)
-        f.write("Spectral Types: ")
-        count = 0
-        for star in system.stars:
-            f.write(star)
-            count = count + 1
-            if (count != system.nStars):
-                f.write(", ")
-            else:
-                f.write("\n\n")
-
-    f.close()
+from JumpLink import JumpLink
 
 
-# This function is currently working with the "drawn" coordinates.
-# @todo need to adjust everything to use "real" coordinates and map to "drawn"
-def writeConnectionData(params, jList):
-    f = open(params['datafile'], 'a')
-    for j in jList:
-        f.write('Link: "%s" "%s"\n' % (j[0], j[1]))
-    f.write("\n")
-    f.close()
+def writeSystemData(params, systemList):
+    """Write all star systems to the configured DAT file."""
+
+    with open(
+            params["datafile"],
+            "w",
+            encoding="utf-8",
+    ) as file:
+        for system in systemList:
+            file.write(
+                f"Name: {system.name}\n"
+            )
+
+            file.write(
+                "Coordinates: "
+                f"({system.x},{system.y},{system.z})\n"
+            )
+
+            file.write(
+                f"Number of Stars: {len(system.stars)}\n"
+            )
+
+            file.write(
+                "Spectral Types: "
+                + ", ".join(system.stars)
+                + "\n\n"
+            )
+
+
+def writeConnectionData(params, jumpList):
+    """Append all jump links and their status to the DAT file."""
+
+    with open(
+            params["datafile"],
+            "a",
+            encoding="utf-8",
+    ) as file:
+        for jump in jumpList:
+            status = jump.status
+
+            if status not in JumpLink.VALID_STATUSES:
+                status = JumpLink.STATUS_NORMAL
+
+            file.write(
+                f'Link: "{jump.startName}" '
+                f'"{jump.endName}" '
+                f'"{status}"\n'
+            )
+
+        file.write("\n")

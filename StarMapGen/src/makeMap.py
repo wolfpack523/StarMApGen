@@ -1,10 +1,32 @@
 #!/usr/bin/env python
-from random import randint, seed
+from JumpLink import JumpLink
 from StarSystem import StarSystem
-from math import sqrt, atan, acos, copysign, sin, cos, fabs
+from math import sqrt, atan, acos, sin, cos, fabs
 
 p2mm = 0.26458333333  # /25.4/96
 
+JUMP_STATUS_STYLES = {
+    JumpLink.STATUS_NORMAL: {
+        "color": "#ffffff",
+        "strokeWidth": 5,
+        "dash": None,
+    },
+    JumpLink.STATUS_CAUTION: {
+        "color": "#ffd43b",
+        "strokeWidth": 5,
+        "dash": (12, 8),
+    },
+    JumpLink.STATUS_DANGEROUS: {
+        "color": "#ff7a00",
+        "strokeWidth": 7,
+        "dash": None,
+    },
+    JumpLink.STATUS_BLOCKED: {
+        "color": "#ff3b30",
+        "strokeWidth": 6,
+        "dash": (4, 7),
+    },
+}
 
 def createDef(spType, starData, dDict):
     """Create the gradient definitions for the star symbols
@@ -425,120 +447,247 @@ def writeMapHeader(f, w, h):
     f.write("\n")
 
 
-def findConnections(sList, jList):
-    """Generate data for system connections
+def findConnections(systemList, jumpList):
+    """Create drawable connection data from JumpLink objects."""
 
-    This function looks over the list of jumps and computes the start
-    and end point of the jump lines on the map
-
-    Inputs
-        SList - list of systems
-        jList - List of jump connections
-
-    Outputs
-        connectionList - List of connection data
-    """
     connectionList = []
-    for jump in jList:
-        s = []
-        for n in jump:
-            for sys in sList:
-                if sys.name == n:
-                    s.append(sys)
-                    break
-        s1 = s[0]
-        s2 = s[1]
-        p1 = s1.drawnPos
-        p2 = s2.drawnPos
-        d = int(
-            sqrt((s1.x - s2.x) * (s1.x - s2.x) + (s1.y - s2.y) * (s1.y - s2.y) + (s1.z - s2.z) * (s1.z - s2.z)) + 0.5)
-        connectionList.append((p1, p2, d))
+
+    systemsByName = {
+        system.name: system
+        for system in systemList
+    }
+
+    for jump in jumpList:
+        # Transitional fallback in case an old tuple still exists
+        # somewhere in memory.
+        if isinstance(jump, JumpLink):
+            startName = jump.startName
+            endName = jump.endName
+            status = jump.status
+        else:
+            try:
+                startName = jump[0]
+                endName = jump[1]
+            except (IndexError, TypeError):
+                print(
+                    f"Ignoring invalid jump link: {jump}"
+                )
+                continue
+
+            status = JumpLink.STATUS_NORMAL
+
+        startSystem = systemsByName.get(startName)
+        endSystem = systemsByName.get(endName)
+
+        if startSystem is None or endSystem is None:
+            print(
+                f'Ignoring jump link "{startName}" -> '
+                f'"{endName}" because a system is missing.'
+            )
+            continue
+
+        if startSystem is endSystem:
+            print(
+                f'Ignoring self-link for "{startName}".'
+            )
+            continue
+
+        deltaX = startSystem.x - endSystem.x
+        deltaY = startSystem.y - endSystem.y
+        deltaZ = startSystem.z - endSystem.z
+
+        distance = int(
+            sqrt(
+                deltaX * deltaX
+                + deltaY * deltaY
+                + deltaZ * deltaZ
+            )
+            + 0.5
+        )
+
+        connectionList.append(
+            (
+                startSystem.drawnPos,
+                endSystem.drawnPos,
+                distance,
+                status,
+            )
+        )
 
     return connectionList
 
 
-def findJumps(sList):
-    """Generate data for system jumps
+def findJumps(systemList):
+    """Generate normal jump links between nearby habitable systems."""
 
-    This function looks over the list of stars and
-    determines which ones should have connections
-    drawn on the map and then builds a list of the
-    pairs of connected systems
-
-    Inputs
-        sList - List of stellar data
-
-    Outputs
-        connectionList - List of connection data
-    """
     jumpList = []
-    # find "habitable stars"
-    hList = []
-    for s in sList:
-        if s.hasHabitable():
-            hList.append(s)
 
-    hListSize = len(hList)
-    for i in range(hListSize):
-        for j in range(i + 1, hListSize):
-            s1 = hList[i]
-            s2 = hList[j]
-            d = int(sqrt(
-                (s1.x - s2.x) * (s1.x - s2.x) + (s1.y - s2.y) * (s1.y - s2.y) + (s1.z - s2.z) * (s1.z - s2.z)) + 0.5)
-            if (d < 15):
-                jumpList.append((s1.name, s2.name))
+    habitableSystems = [
+        system
+        for system in systemList
+        if system.hasHabitable()
+    ]
+
+    for firstIndex in range(
+            len(habitableSystems)
+    ):
+        for secondIndex in range(
+                firstIndex + 1,
+                len(habitableSystems),
+        ):
+            firstSystem = habitableSystems[firstIndex]
+            secondSystem = habitableSystems[secondIndex]
+
+            deltaX = firstSystem.x - secondSystem.x
+            deltaY = firstSystem.y - secondSystem.y
+            deltaZ = firstSystem.z - secondSystem.z
+
+            distance = int(
+                sqrt(
+                    deltaX * deltaX
+                    + deltaY * deltaY
+                    + deltaZ * deltaZ
+                )
+                + 0.5
+            )
+
+            if distance < 15:
+                jumpList.append(
+                    JumpLink(
+                        firstSystem.name,
+                        secondSystem.name,
+                        JumpLink.STATUS_NORMAL,
+                    )
+                )
 
     return jumpList
 
 
-def drawConnections(p, f, cList):
-    for c in cList:
-        # draw the line
-        data = '<g><line style="stroke:rgb(255,255,255); stroke-width:%f"' % (5 * p2mm)
-        data += ' x1="%f" y1="%f" x2="%f" y2="%f" />\n' % (c[0][0] * p2mm, c[0][1] * p2mm, c[1][0] * p2mm,
-                                                           c[1][1] * p2mm)
-        # draw the label
-        offset = (-45., -45.);
-        xscale = 0.;
-        yscale = 0.;
-        slope = 0.;
-        angle = 0.;
-        x1 = float(c[0][0])
-        x2 = float(c[1][0])
-        y1 = float(c[0][1])
-        y2 = float(c[1][1])
-        if (x1 != x2):  # this would give an infinite slope
+def drawConnections(params, file, connectionList):
+    """Draw jump links using their configured route status."""
+
+    for connection in connectionList:
+        startPosition = connection[0]
+        endPosition = connection[1]
+        distance = connection[2]
+
+        status = (
+            connection[3]
+            if len(connection) > 3
+            else JumpLink.STATUS_NORMAL
+        )
+
+        style = JUMP_STATUS_STYLES.get(
+            status,
+            JUMP_STATUS_STYLES[
+                JumpLink.STATUS_NORMAL
+            ],
+        )
+
+        color = style["color"]
+
+        strokeWidth = (
+                style["strokeWidth"]
+                * p2mm
+        )
+
+        styleParts = [
+            f"stroke:{color}",
+            f"stroke-width:{strokeWidth:f}",
+            "fill:none",
+        ]
+
+        dash = style["dash"]
+
+        if dash is not None:
+            dashArray = ",".join(
+                f"{value * p2mm:f}"
+                for value in dash
+            )
+
+            styleParts.append(
+                f"stroke-dasharray:{dashArray}"
+            )
+
+        lineStyle = "; ".join(styleParts)
+
+        data = (
+            f'<g data-jump-status="{status}">'
+            f'<line style="{lineStyle}"'
+        )
+
+        data += (
+                ' x1="%f" y1="%f" x2="%f" y2="%f" />\n'
+                % (
+                    startPosition[0] * p2mm,
+                    startPosition[1] * p2mm,
+                    endPosition[0] * p2mm,
+                    endPosition[1] * p2mm,
+                )
+        )
+
+        offset = (-45.0, -45.0)
+        xScale = 0.0
+        yScale = 0.0
+        slope = 0.0
+        angle = 0.0
+
+        x1 = float(startPosition[0])
+        x2 = float(endPosition[0])
+        y1 = float(startPosition[1])
+        y2 = float(endPosition[1])
+
+        if x1 != x2:
             slope = (y1 - y2) / (x2 - x1)
-            angle = atan(-slope) * 180 / acos(-1.)
-            xscale = sin(atan(slope) * 2)
-            yscale = cos(atan(slope) * 2)
-            if (fabs(angle) >= 45.0):
-                xscale = -xscale
-            #				yscale = -yscale
-            if (slope < 0):
-                xscale = -xscale
-        #				yscale = -yscale
-        #			if (slope <= 0): print ("I: sl = %f an = %f xs = %f ys= %f d = %f x1=%f y1=%f x2=%f y2=%f" % (slope,angle,xscale,yscale,c[2],(x1/150),(y1/150),(x2/150),(y2/150)))
-        else:
-            xscale = -0.2
-            yscale = 0
-        #			if (slope <= 0): print ("I2: sl = %f an = %f xs = %f ys= %f d = %f x1=%f y1=%f x2=%f y2=%f" % (slope,angle,xscale,yscale,c[2],(c[0][0]/150),(c[0][1]/150),(c[1][0]/150),(c[1][1]/150)))
-        if (0 == slope):
-            yscale /= 2
-        else:
-            if (fabs(angle) < 10):
-                yscale *= 0.8
-        xMid = (c[0][0] + c[1][0]) / 2 + xscale * offset[0]
-        yMid = (c[0][1] + c[1][1]) / 2 + yscale * offset[1]  # - (1-yscale) * copysign(20,slope)
-        #		if (fabs(angle)<10): yMid -= copysign(10,slope)
-        data += '<text x="%f" y="%f" font-size="%f" font-family="Ariel,Helvetica,sans-serif" fill="white">' % (
-            xMid * p2mm, yMid * p2mm, 40 * p['scale'] * p2mm)
-        data += "%d</text></g>\n" % c[2]
-        #		if (fabs(angle) < 20 and fabs(angle) >=10):
-        f.write(data)
+            angle = atan(-slope) * 180 / acos(-1.0)
 
+            xScale = sin(
+                atan(slope) * 2
+            )
 
-#			print ("O: sl = %f an = %f xs = %f ys= %f d = %f x1=%f y1=%f x2=%f y2=%f" % (slope,angle,xscale,yscale,c[2],(c[0][0]/150),(c[0][1]/150),(c[1][0]/150),(c[1][1]/150)))
+            yScale = cos(
+                atan(slope) * 2
+            )
+
+            if fabs(angle) >= 45.0:
+                xScale = -xScale
+
+            if slope < 0:
+                xScale = -xScale
+        else:
+            xScale = -0.2
+            yScale = 0
+
+        if slope == 0:
+            yScale /= 2
+        elif fabs(angle) < 10:
+            yScale *= 0.8
+
+        xMiddle = (
+                          startPosition[0] + endPosition[0]
+                  ) / 2 + xScale * offset[0]
+
+        yMiddle = (
+                          startPosition[1] + endPosition[1]
+                  ) / 2 + yScale * offset[1]
+
+        data += (
+                '<text x="%f" y="%f" font-size="%f" '
+                'font-family="Arial,Helvetica,sans-serif" '
+                'fill="%s">'
+                % (
+                    xMiddle * p2mm,
+                    yMiddle * p2mm,
+                    40 * params["scale"] * p2mm,
+                    color,
+                )
+        )
+
+        data += (
+            f"{distance}</text></g>\n"
+        )
+
+        file.write(data)
 
 def writeNames(p, f, sList):
     '''This adds in the names of the star systems.
