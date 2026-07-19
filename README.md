@@ -1,0 +1,455 @@
+# StarMapGen
+
+StarMapGen ist ein grafisches Windows-Programm zum Erstellen und Bearbeiten
+von dreidimensionalen Sternenkarten für Science-Fiction-Settings.
+
+Das Programm verwaltet die Kartendaten in einer `.dat`-Datei und erzeugt
+daraus eine frei skalierbare SVG-Karte.
+
+## Funktionen
+
+- Zufällige Sternenkarten erzeugen
+- Vorhandene Karten aus einer `.dat`-Datei laden
+- Kartengrenzen in alle sechs Richtungen erweitern
+- Sternensysteme hinzufügen, bearbeiten und löschen
+- Mehrfachsternsysteme darstellen
+- Verschiedene Stern- und Objekttypen darstellen
+- Sprungverbindungen hinzufügen, bearbeiten und entfernen
+- Unterschiedliche Zustände für Sprungverbindungen anzeigen
+- Systemnamen und Koordinaten als bearbeitbaren SVG-Text ausgeben
+- SVG-Karte direkt im Programm anzeigen
+- DAT- und SVG-Datei nach Änderungen automatisch aktualisieren
+
+## Programm starten
+
+### Windows-Version
+
+Die Datei
+
+```text
+StarMapGen.exe
+```
+kann direkt gestartet werden.
+
+Eine separate Installation von Python ist nicht erforderlich.
+
+Relative Dateinamen werden im Verzeichnis der EXE verwendet. Wird
+beispielsweise als Dateiname sector.dat angegeben, wird die Datei neben
+der EXE gespeichert beziehungsweise dort gesucht.
+
+## Aus dem Quellcode
+
+Voraussetzungen:
+
+- Python 3.11 oder neuer
+- wxPython 4.2.x
+
+Abhängigkeiten installieren:
+
+```text
+python -m pip install wxPython
+```
+
+Programm starten:
+
+```text
+python StarMapGen/src/StarMapGen.py
+```
+
+Bei Verwendung der virtuellen Umgebung des Projekts:
+
+```text
+.\.venv\Scripts\python.exe .\StarMapGen\src\StarMapGen.py
+```
+
+## Benutzeroberfläche
+
+Die Benutzeroberfläche besteht aus zwei Bereichen:
+
+- Links befinden sich die Einstellungen und der Systemeditor.
+- Rechts wird die aktuelle SVG-Karte angezeigt.
+
+Die linke Spalte kann gescrollt werden.
+
+Folgende Bereiche können ein- und ausgeklappt werden:
+
+- Map Files and Display
+- Random Generation
+- Map Bounds
+
+Der Bereich Star Systems bleibt dauerhaft verfügbar.
+
+### Neue Zufallskarte erzeugen
+
+Den Bereich Random Generation öffnen.
+
+#### Map Width (x)
+
+Breite der Karte auf der X-Achse.
+
+#### Map Height (y)
+
+Höhe der Karte auf der Y-Achse.
+
+#### Map Thickness (z)
+
+Ausdehnung der Karte auf der Z-Achse.
+
+Die Z-Achse wird um 0 herum aufgebaut.
+
+Bei einer Tiefe von 20 entstehen beispielsweise folgende Grenzen:
+
+```text
+Z = -10 bis 9
+```
+
+#### Stellar Density
+
+Bestimmt die durchschnittliche Anzahl der erzeugten Sternensysteme.
+
+Ein höherer Wert erzeugt mehr Systeme.
+
+Nach Eingabe der Werte:
+
+```text
+Generate Random Map
+```
+
+anklicken.
+
+Die Karte wird erzeugt, als DAT-Datei gespeichert und als SVG dargestellt.
+
+### Vorhandene Karte laden
+
+Den Bereich Map Files and Display öffnen.
+
+Unter Data Filename den Namen der zu ladenden Datei eintragen.
+
+Beispiel:
+
+```text
+sampleMap.dat
+```
+Danach:
+
+```text
+Load Map
+```
+
+anklicken.
+
+Beim Laden werden folgende Daten übernommen:
+
+- Kartengrenzen
+- Sternensysteme
+- Systempositionen
+- Spektraltypen
+- Sprungverbindungen
+- Zustände der Sprungverbindungen
+
+Ältere DAT-Dateien ohne gespeicherte Kartengrenzen werden ebenfalls
+unterstützt. In diesem Fall ermittelt StarMapGen die Grenzen aus den
+vorhandenen Systempositionen.
+
+### Dateien und Darstellung
+#### Output Map Filename
+
+Name der zu erzeugenden SVG-Datei.
+
+Beispiel:
+
+```text
+sampleMap.svg
+```
+
+#### Data Filename
+
+Name der DAT-Datei, die geladen und gespeichert wird.
+
+Beispiel:
+
+```text
+sampleMap.dat
+```
+
+#### Text Scale
+
+Skalierung der Systemnamen und Koordinaten innerhalb der SVG-Karte.
+
+#### Print Z coordinate
+
+Legt fest, ob die Z-Koordinate an den Sternensystemen angezeigt wird.
+
+### Kartengrenzen
+
+Der Bereich Map Bounds zeigt die aktuellen Grenzen der Karte:
+
+```text
+X: Minimum bis Maximum
+Y: Minimum bis Maximum
+Z: Minimum bis Maximum
+```
+
+Unter Extend by wird festgelegt, um wie viele Einheiten die Karte
+erweitert werden soll.
+
+|Schaltfläche|Wirkung|
+|---------|---------|
+|```X -```|Karte in negative X-Richtung erweitern|
+|```X +```|Karte in positive X-Richtung erweitern|
+|```Y -```|Karte in negative Y-Richtung erweitern|
+|```Y +```|Karte in positive Y-Richtung erweitern|
+|```Z -```|Karte in negative Z-Richtung erweitern|
+|```Z +```|Karte in positive Z-Richtung erweitern|
+
+Beim Erweitern werden bestehende Sternensysteme nicht verschoben. Es werden
+ausschließlich die äußeren Grenzen der Karte verändert.
+
+Die Karte kann derzeit erweitert, aber nicht verkleinert werden.
+
+### Sternensysteme bearbeiten
+
+Im Bereich Star Systems werden alle Systeme der aktuellen Karte
+aufgelistet.
+
+Nach Auswahl eines Systems können folgende Werte bearbeitet werden:
+
+- Name
+- X-Koordinate
+- Y-Koordinate
+- Z-Koordinate
+- Spektraltypen
+
+Änderungen werden mit
+
+```text 
+Apply Changes
+```
+
+übernommen.
+
+Die Koordinaten müssen innerhalb der aktuellen Map Bounds liegen.
+
+Systemnamen müssen eindeutig sein.
+
+## Neues Sternensystem anlegen
+
+Auf
+```text
+New System
+```
+klicken.
+
+StarMapGen vergibt automatisch einen fortlaufenden Systemnamen:
+
+```text
+S000
+S001
+S002
+...
+S009
+S010
+```
+
+Andere Namen können anschließend manuell eingetragen werden.
+
+Gelöschte Nummern werden nicht erneut vergeben. Existiert beispielsweise
+bereits ```S010```, erhält das nächste System den Namen ```S011```.
+
+Position und Spektraltypen eintragen und anschließend
+
+```text
+Create System
+```
+
+anklicken.
+
+## Sternensystem löschen
+
+Das zu löschende System auswählen und
+
+```text
+Delete System
+```
+
+anklicken.
+
+Alle Sprungverbindungen, die mit diesem System verbunden sind, werden
+ebenfalls entfernt.
+
+## Spektraltypen
+
+Mehrere Sterne können durch Kommas, Semikolons oder Zeilenumbrüche getrennt
+werden.
+
+Beispiel:
+
+```text
+G2, M4, WD
+```
+
+### Hauptreihensterne
+
+```text
+O0 bis O9
+B0 bis B9
+A0 bis A9
+F0 bis F9
+G0 bis G9
+K0 bis K9
+M0 bis M9
+```
+
+### Riesen
+
+```text
+F0III bis F9III
+G0III bis G9III
+K0III bis K9III
+M0III bis M9III
+```
+
+### Überriesen
+
+```text
+F0I bis F9I
+G0I bis G9I
+K0I bis K9I
+M0I bis M9I
+```
+
+### Besondere Objekte
+
+
+|Kürzel|Bedeutung|
+|---|---|
+|```BD```|Brauner Zwerg|
+|```WD```|Weißer Zwerg|
+|```NS```|Neutronenstern|
+|```BH```|Schwarzes Loch|
+
+### Sprungverbindungen
+
+Für das ausgewählte Sternensystem können Sprungverbindungen hinzugefügt,
+bearbeitet und entfernt werden.
+
+Verfügbare Zustände:
+
+|Status|Darstellung|
+|---|---|
+|Normal|Weiße durchgezogene Linie|
+|Caution|Gelbe gestrichelte Linie|
+|Dangerous|Orange hervorgehobene Linie|
+|Blocked|Rote, deutlich gestrichelte Linie|
+
+Eine Verbindung wird nur einmal gespeichert, gilt aber für beide
+beteiligten Systeme.
+
+## DAT-Datei
+
+Aktuelle DAT-Dateien enthalten die vollständigen Kartengrenzen:
+  
+```text 
+Map Minimum: (1,1,-10)
+Map Maximum: (20,20,9)
+```
+
+Danach folgen die Sternensysteme und Sprungverbindungen.
+
+Die Datei kann grundsätzlich mit einem Texteditor geöffnet werden. Für
+manuelle Änderungen sollte vorher eine Sicherungskopie erstellt werden.
+
+### Automatisches Speichern
+
+Nach Änderungen an
+
+- Sternensystemen,
+- Sprungverbindungen oder
+- Kartengrenzen
+
+werden die DAT-Datei und die SVG-Karte automatisch neu geschrieben.
+
+Vor umfangreichen Änderungen empfiehlt sich trotzdem eine Sicherungskopie
+der DAT-Datei.
+
+### SVG-Datei weiterbearbeiten
+
+Die erzeugte SVG-Datei kann beispielsweise mit folgenden Programmen
+geöffnet werden:
+
+- Inkscape
+- Affinity Designer
+- Adobe Illustrator
+- modernen Webbrowsern
+- geeigneten Texteditoren
+
+Systemnamen und Koordinaten werden als SVG-Text gespeichert und können in
+einem SVG-Editor direkt bearbeitet werden.
+
+## Windows-EXE erstellen
+
+PyInstaller installieren:
+
+```text
+.\.venv\Scripts\python.exe -m pip install --upgrade pyinstaller
+```
+
+### Testbare Ordner-Version
+
+```text
+.\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --onedir --console --name StarMapGen --paths ".\StarMapGen\src" --collect-all wx ".\StarMapGen\src\StarMapGen.py"
+```
+
+Das Ergebnis befindet sich anschließend unter:
+
+```text
+dist\StarMapGen\StarMapGen.exe
+```
+
+### Einzelne EXE
+
+```text
+.\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --onefile --windowed --name StarMapGen --paths ".\StarMapGen\src" --collect-all wx ".\StarMapGen\src\StarMapGen.py"
+```
+
+Das Ergebnis befindet sich anschließend unter:
+
+```text
+dist\StarMapGen.exe
+```
+
+## Projektstruktur
+```text
+StarMapGen/
+├── StarMapGen/
+│   └── src/
+│       ├── StarMapGen.py
+│       ├── SMGFrame.py
+│       ├── SMGMapPanel.py
+│       ├── StarSystem.py
+│       ├── JumpLink.py
+│       ├── loadData.py
+│       ├── writeData.py
+│       └── makeMap.py
+├── build/
+├── dist/
+└── README.md
+```
+
+## Credits und Lizenz
+
+Dieses Projekt basiert auf dem ursprünglichen StarMapGen-Projekt von
+dagorym:
+
+https://github.com/dagorym/StarMapGen
+
+Vor einer öffentlichen Weitergabe oder Veröffentlichung sollte geprüft
+werden, unter welcher Lizenz der ursprüngliche Quellcode verwendet und
+verbreitet werden darf.
+
+Sobald die Lizenzfrage geklärt ist, sollte dem Projekt eine passende
+LICENSE-Datei hinzugefügt werden.
+
+```text
+ ​:contentReference[oaicite:0]{index=0}​
+```
