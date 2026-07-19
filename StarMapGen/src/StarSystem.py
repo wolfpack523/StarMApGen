@@ -3,20 +3,25 @@ from random import randint
 
 class StarSystem:
     id = 0
-    def __init__(self,params):
+    def __init__(self, params, generate=True):
         self.x = 0
         self.y = 0
         self.z = 0
-        self.mapPos = (0,0)
+
+        self.mapPos = (0, 0)
+        self.drawnPos = (0, 0)
+
         self.nStars = 0
         self.stars = []
+
         self.mParams = params
-        self.name = "" # star system name
-        self._generatePosition()
-        self._generateMultiplicity()
-        self._generateSpectralType()
-        self.drawnPos = (0,0)  # used to know where it was drawn on the map
-    
+        self.name = ""
+
+        if generate:
+            self._generatePosition()
+            self._generateMultiplicity()
+            self._generateSpectralType()
+
     def _generatePosition(self):
         """Generates random position of star system within x,y,z boundaries
         specified by the map generation parameters

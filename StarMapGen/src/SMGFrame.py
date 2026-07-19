@@ -14,148 +14,434 @@ from makeMap import (
     findOverlaps,
 )
 from SMGMapPanel import SMGMapPanel
+from StarSystem import StarSystem
 from writeData import writeConnectionData, writeSystemData
 
 
 class SMGFrame(wx.Frame):
     def __init__(self):
-        super().__init__(parent=None, title="Star Map Generator")
+        super().__init__(
+            parent=None,
+            title="Star Map Generator",
+        )
+
         self.CreateStatusBar()
 
-        # Current map state. These values remain available for the complete
-        # lifetime of the application and can later be edited by the UI.
+        # Current map state
         self.params = {}
         self.starList = []
         self.jumpList = []
+
+        # Editor state
         self.selectedSystemIndex = wx.NOT_FOUND
+        self.isCreatingSystem = False
+        self.creationReturnIndex = wx.NOT_FOUND
 
         self.Center()
 
         mainPanel = wx.Panel(self)
 
-        # Sizer for entire window
-        self.mainSizer = wx.BoxSizer()
+        # Sizer for the entire window
+        self.mainSizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        # Sizer for left half of window
+        # Left side
         inputSizer = wx.BoxSizer(wx.VERTICAL)
 
-        # Sizer for the input data parameters
+        self.createParameterControls(
+            mainPanel,
+            inputSizer,
+        )
+
+        self.createSystemEditor(
+            mainPanel,
+            inputSizer,
+        )
+
+        self.mainSizer.Add(
+            inputSizer,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+        )
+
+        # Map display area
+        mapSizer = wx.FlexGridSizer(
+            rows=1,
+            cols=1,
+            vgap=0,
+            hgap=0,
+        )
+
+        mapSizer.AddGrowableCol(0)
+        mapSizer.AddGrowableRow(0)
+        mapSizer.SetFlexibleDirection(wx.BOTH)
+
+        self.mapPanel = SMGMapPanel(mainPanel)
+
+        mapSizer.Add(
+            self.mapPanel,
+            1,
+            wx.ALL | wx.EXPAND,
+            5,
+        )
+
+        self.mainSizer.Add(
+            mapSizer,
+            1,
+            wx.ALL | wx.EXPAND,
+            5,
+        )
+
+        self.setDefaults()
+
+        self.mainSizer.SetSizeHints(self)
+        mainPanel.SetSizer(self.mainSizer)
+        mainPanel.Layout()
+
+        self.Bind(
+            wx.EVT_SIZE,
+            self.onResize,
+        )
+
+        self.Show()
+
+    def createParameterControls(self, parent, inputSizer):
+        """Create the controls used to generate or load a map."""
+
         dataSizer = wx.StaticBoxSizer(
             wx.VERTICAL,
-            mainPanel,
+            parent,
             label="Map Parameters",
         )
 
         # X dimension
-        sizer1 = wx.BoxSizer(wx.HORIZONTAL)
-        xSizeLabel = wx.StaticText(mainPanel, label="Map Width (x):")
-        sizer1.Add(xSizeLabel, 0, wx.TOP, 10)
-        self.xSize = wx.lib.intctrl.IntCtrl(mainPanel, min=1)
-        sizer1.Add(self.xSize, 0, wx.ALL | wx.EXPAND, 5)
-        dataSizer.Add(sizer1, 0, wx.ALIGN_RIGHT)
+        row = wx.BoxSizer(wx.HORIZONTAL)
+        row.Add(
+            wx.StaticText(
+                parent,
+                label="Map Width (x):",
+            ),
+            0,
+            wx.TOP,
+            10,
+        )
+
+        self.xSize = wx.lib.intctrl.IntCtrl(
+            parent,
+            min=1,
+        )
+
+        row.Add(
+            self.xSize,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+        )
+
+        dataSizer.Add(
+            row,
+            0,
+            wx.ALIGN_RIGHT,
+        )
 
         # Y dimension
-        sizer2 = wx.BoxSizer(wx.HORIZONTAL)
-        ySizeLabel = wx.StaticText(mainPanel, label="Map Height (y):")
-        sizer2.Add(ySizeLabel, 0, wx.TOP, 10)
-        self.ySize = wx.lib.intctrl.IntCtrl(mainPanel, min=1)
-        sizer2.Add(self.ySize, 0, wx.ALL | wx.EXPAND, 5)
-        dataSizer.Add(sizer2, 0, wx.ALIGN_RIGHT)
+        row = wx.BoxSizer(wx.HORIZONTAL)
+        row.Add(
+            wx.StaticText(
+                parent,
+                label="Map Height (y):",
+            ),
+            0,
+            wx.TOP,
+            10,
+        )
+
+        self.ySize = wx.lib.intctrl.IntCtrl(
+            parent,
+            min=1,
+        )
+
+        row.Add(
+            self.ySize,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+        )
+
+        dataSizer.Add(
+            row,
+            0,
+            wx.ALIGN_RIGHT,
+        )
 
         # Z dimension
-        sizer3 = wx.BoxSizer(wx.HORIZONTAL)
-        zSizeLabel = wx.StaticText(mainPanel, label="Map Thickness (z):")
-        sizer3.Add(zSizeLabel, 0, wx.TOP, 10)
-        self.zSize = wx.lib.intctrl.IntCtrl(mainPanel, min=1)
-        sizer3.Add(self.zSize, 0, wx.ALL | wx.EXPAND, 5)
-        dataSizer.Add(sizer3, 0, wx.ALIGN_RIGHT)
+        row = wx.BoxSizer(wx.HORIZONTAL)
+        row.Add(
+            wx.StaticText(
+                parent,
+                label="Map Thickness (z):",
+            ),
+            0,
+            wx.TOP,
+            10,
+        )
+
+        self.zSize = wx.lib.intctrl.IntCtrl(
+            parent,
+            min=1,
+        )
+
+        row.Add(
+            self.zSize,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+        )
+
+        dataSizer.Add(
+            row,
+            0,
+            wx.ALIGN_RIGHT,
+        )
 
         # Stellar density
-        sizer4 = wx.BoxSizer(wx.HORIZONTAL)
-        densityLabel = wx.StaticText(mainPanel, label="Stellar Density:")
-        sizer4.Add(densityLabel, 0, wx.TOP, 10)
-        self.stellarDensity = NumCtrl(mainPanel, min=0, fractionWidth=4)
-        sizer4.Add(self.stellarDensity, 0, wx.ALL | wx.EXPAND, 5)
-        dataSizer.Add(sizer4, 0, wx.ALIGN_RIGHT)
+        row = wx.BoxSizer(wx.HORIZONTAL)
+        row.Add(
+            wx.StaticText(
+                parent,
+                label="Stellar Density:",
+            ),
+            0,
+            wx.TOP,
+            10,
+        )
+
+        self.stellarDensity = NumCtrl(
+            parent,
+            min=0,
+            fractionWidth=4,
+        )
+
+        row.Add(
+            self.stellarDensity,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+        )
+
+        dataSizer.Add(
+            row,
+            0,
+            wx.ALIGN_RIGHT,
+        )
 
         # Text scale
-        sizer5 = wx.BoxSizer(wx.HORIZONTAL)
-        textScaleLabel = wx.StaticText(mainPanel, label="Text Scale:")
-        sizer5.Add(textScaleLabel, 0, wx.TOP, 10)
-        self.textScale = NumCtrl(mainPanel, min=0.25, fractionWidth=2)
-        sizer5.Add(self.textScale, 0, wx.ALL | wx.EXPAND, 5)
-        dataSizer.Add(sizer5, 0, wx.ALIGN_RIGHT)
+        row = wx.BoxSizer(wx.HORIZONTAL)
+        row.Add(
+            wx.StaticText(
+                parent,
+                label="Text Scale:",
+            ),
+            0,
+            wx.TOP,
+            10,
+        )
+
+        self.textScale = NumCtrl(
+            parent,
+            min=0.25,
+            fractionWidth=2,
+        )
+
+        row.Add(
+            self.textScale,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+        )
+
+        dataSizer.Add(
+            row,
+            0,
+            wx.ALIGN_RIGHT,
+        )
 
         # Output map filename
-        sizer6 = wx.BoxSizer(wx.HORIZONTAL)
-        outMapNameLabel = wx.StaticText(
-            mainPanel,
-            label="Output Map Filename:",
+        row = wx.BoxSizer(wx.HORIZONTAL)
+        row.Add(
+            wx.StaticText(
+                parent,
+                label="Output Map Filename:",
+            ),
+            0,
+            wx.TOP,
+            10,
         )
-        sizer6.Add(outMapNameLabel, 0, wx.TOP, 10)
-        self.outMapName = wx.TextCtrl(mainPanel)
-        sizer6.Add(self.outMapName, 0, wx.ALL | wx.EXPAND, 5)
-        dataSizer.Add(sizer6, 0, wx.ALIGN_RIGHT)
+
+        self.outMapName = wx.TextCtrl(parent)
+
+        row.Add(
+            self.outMapName,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+        )
+
+        dataSizer.Add(
+            row,
+            0,
+            wx.ALIGN_RIGHT,
+        )
 
         # Output data filename
-        sizer7 = wx.BoxSizer(wx.HORIZONTAL)
-        outDataNameLabel = wx.StaticText(
-            mainPanel,
-            label="Output Data Filename:",
+        row = wx.BoxSizer(wx.HORIZONTAL)
+        row.Add(
+            wx.StaticText(
+                parent,
+                label="Output Data Filename:",
+            ),
+            0,
+            wx.TOP,
+            10,
         )
-        sizer7.Add(outDataNameLabel, 0, wx.TOP, 10)
-        self.outDataName = wx.TextCtrl(mainPanel)
-        sizer7.Add(self.outDataName, 0, wx.ALL | wx.EXPAND, 5)
-        dataSizer.Add(sizer7, 0, wx.ALIGN_RIGHT)
+
+        self.outDataName = wx.TextCtrl(parent)
+
+        row.Add(
+            self.outDataName,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+        )
+
+        dataSizer.Add(
+            row,
+            0,
+            wx.ALIGN_RIGHT,
+        )
 
         # Input data filename
-        sizer8 = wx.BoxSizer(wx.HORIZONTAL)
-        inDataNameLabel = wx.StaticText(
-            mainPanel,
-            label="Input Data Filename:",
+        row = wx.BoxSizer(wx.HORIZONTAL)
+        row.Add(
+            wx.StaticText(
+                parent,
+                label="Input Data Filename:",
+            ),
+            0,
+            wx.TOP,
+            10,
         )
-        sizer8.Add(inDataNameLabel, 0, wx.TOP, 10)
-        self.inDataName = wx.TextCtrl(mainPanel)
-        sizer8.Add(self.inDataName, 0, wx.ALL | wx.EXPAND, 5)
-        dataSizer.Add(sizer8, 0, wx.ALIGN_RIGHT)
+
+        self.inDataName = wx.TextCtrl(parent)
+
+        row.Add(
+            self.inDataName,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+        )
+
+        dataSizer.Add(
+            row,
+            0,
+            wx.ALIGN_RIGHT,
+        )
 
         # Print Z coordinate
-        sizer9 = wx.BoxSizer(wx.HORIZONTAL)
-        printZLabel = wx.StaticText(mainPanel, label="Print Z coordinate:")
-        sizer9.Add(printZLabel, 0, wx.TOP, 5)
-        self.printZ = wx.CheckBox(mainPanel)
-        sizer9.Add(self.printZ, 0, wx.ALL, 5)
-        dataSizer.Add(sizer9, 0, wx.ALIGN_RIGHT)
+        row = wx.BoxSizer(wx.HORIZONTAL)
+        row.Add(
+            wx.StaticText(
+                parent,
+                label="Print Z coordinate:",
+            ),
+            0,
+            wx.TOP,
+            5,
+        )
 
-        inputSizer.Add(dataSizer, 0)
+        self.printZ = wx.CheckBox(parent)
 
-        # Buttons
-        btnSizer = wx.BoxSizer()
+        row.Add(
+            self.printZ,
+            0,
+            wx.ALL,
+            5,
+        )
 
-        generateBtn = wx.Button(mainPanel, label="Generate Map")
-        generateBtn.Bind(wx.EVT_BUTTON, self.generateMap)
-        btnSizer.Add(generateBtn, 0, wx.ALL, 5)
+        dataSizer.Add(
+            row,
+            0,
+            wx.ALIGN_RIGHT,
+        )
 
-        clearBtn = wx.Button(mainPanel, label="Reset Values")
-        clearBtn.Bind(wx.EVT_BUTTON, self.resetParameters)
-        btnSizer.Add(clearBtn, 0, wx.ALL, 5)
+        inputSizer.Add(
+            dataSizer,
+            0,
+            wx.EXPAND,
+        )
 
-        inputSizer.Add(btnSizer, 0, wx.ALL | wx.CENTER, 5)
+        buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        # Star system list and details
-        systemEditorSizer = wx.StaticBoxSizer(
+        generateButton = wx.Button(
+            parent,
+            label="Generate Map",
+        )
+        generateButton.Bind(
+            wx.EVT_BUTTON,
+            self.generateMap,
+        )
+
+        buttonSizer.Add(
+            generateButton,
+            0,
+            wx.ALL,
+            5,
+        )
+
+        resetButton = wx.Button(
+            parent,
+            label="Reset Values",
+        )
+        resetButton.Bind(
+            wx.EVT_BUTTON,
+            self.resetParameters,
+        )
+
+        buttonSizer.Add(
+            resetButton,
+            0,
+            wx.ALL,
+            5,
+        )
+
+        inputSizer.Add(
+            buttonSizer,
+            0,
+            wx.ALL | wx.CENTER,
+            5,
+        )
+
+    def createSystemEditor(self, parent, inputSizer):
+        """Create the star system and jump link editor."""
+
+        editorSizer = wx.StaticBoxSizer(
             wx.VERTICAL,
-            mainPanel,
+            parent,
             label="Star Systems",
         )
 
         self.systemList = wx.ListBox(
-            mainPanel,
-            size=(320, 160),
+            parent,
+            size=(340, 140),
             style=wx.LB_SINGLE,
         )
-        self.systemList.Bind(wx.EVT_LISTBOX, self.onSystemSelected)
-        systemEditorSizer.Add(
+
+        self.systemList.Bind(
+            wx.EVT_LISTBOX,
+            self.onSystemSelected,
+        )
+
+        editorSizer.Add(
             self.systemList,
             0,
             wx.ALL | wx.EXPAND,
@@ -167,132 +453,283 @@ class SMGFrame(wx.Frame):
             vgap=5,
             hgap=5,
         )
+
         detailsSizer.AddGrowableCol(1, 1)
 
         detailsSizer.Add(
-            wx.StaticText(mainPanel, label="Name:"),
+            wx.StaticText(
+                parent,
+                label="Name:",
+            ),
             0,
             wx.ALIGN_CENTER_VERTICAL,
         )
-        self.systemName = wx.TextCtrl(mainPanel)
-        detailsSizer.Add(self.systemName, 1, wx.EXPAND)
+
+        self.systemName = wx.TextCtrl(parent)
 
         detailsSizer.Add(
-            wx.StaticText(mainPanel, label="X:"),
-            0,
-            wx.ALIGN_CENTER_VERTICAL,
+            self.systemName,
+            1,
+            wx.EXPAND,
         )
-        self.systemX = wx.TextCtrl(mainPanel)
-        detailsSizer.Add(self.systemX, 1, wx.EXPAND)
 
         detailsSizer.Add(
-            wx.StaticText(mainPanel, label="Y:"),
+            wx.StaticText(
+                parent,
+                label="X:",
+            ),
             0,
             wx.ALIGN_CENTER_VERTICAL,
         )
-        self.systemY = wx.TextCtrl(mainPanel)
-        detailsSizer.Add(self.systemY, 1, wx.EXPAND)
+
+        self.systemX = wx.TextCtrl(parent)
 
         detailsSizer.Add(
-            wx.StaticText(mainPanel, label="Z:"),
-            0,
-            wx.ALIGN_CENTER_VERTICAL,
+            self.systemX,
+            1,
+            wx.EXPAND,
         )
-        self.systemZ = wx.TextCtrl(mainPanel)
-        detailsSizer.Add(self.systemZ, 1, wx.EXPAND)
 
         detailsSizer.Add(
-            wx.StaticText(mainPanel, label="Number of Stars:"),
+            wx.StaticText(
+                parent,
+                label="Y:",
+            ),
             0,
             wx.ALIGN_CENTER_VERTICAL,
         )
+
+        self.systemY = wx.TextCtrl(parent)
+
+        detailsSizer.Add(
+            self.systemY,
+            1,
+            wx.EXPAND,
+        )
+
+        detailsSizer.Add(
+            wx.StaticText(
+                parent,
+                label="Z:",
+            ),
+            0,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        self.systemZ = wx.TextCtrl(parent)
+
+        detailsSizer.Add(
+            self.systemZ,
+            1,
+            wx.EXPAND,
+        )
+
+        detailsSizer.Add(
+            wx.StaticText(
+                parent,
+                label="Number of Stars:",
+            ),
+            0,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
         self.systemStarCount = wx.TextCtrl(
-            mainPanel,
+            parent,
             style=wx.TE_READONLY,
         )
-        detailsSizer.Add(self.systemStarCount, 1, wx.EXPAND)
 
         detailsSizer.Add(
-            wx.StaticText(mainPanel, label="Spectral Types:"),
+            self.systemStarCount,
+            1,
+            wx.EXPAND,
+        )
+
+        detailsSizer.Add(
+            wx.StaticText(
+                parent,
+                label="Spectral Types:",
+            ),
             0,
             wx.ALIGN_TOP,
         )
+
         self.systemSpectralTypes = wx.TextCtrl(
-            mainPanel,
+            parent,
             size=(-1, 55),
             style=wx.TE_MULTILINE,
         )
-        detailsSizer.Add(self.systemSpectralTypes, 1, wx.EXPAND)
 
-        systemEditorSizer.Add(
+        detailsSizer.Add(
+            self.systemSpectralTypes,
+            1,
+            wx.EXPAND,
+        )
+
+        editorSizer.Add(
             detailsSizer,
             0,
             wx.ALL | wx.EXPAND,
             5,
         )
 
-        spectralTypeHint = wx.StaticText(
-            mainPanel,
+        spectralHelpSizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        spectralHint = wx.StaticText(
+            parent,
             label=(
-                "Separate spectral types with commas, semicolons, or new lines. "
-                "Examples: G2, M4, WD, NS"
+                "Separate spectral types with commas, "
+                "semicolons, or new lines."
             ),
         )
-        spectralTypeHint.Wrap(310)
-        systemEditorSizer.Add(
-            spectralTypeHint,
+
+        spectralHint.Wrap(240)
+
+        spectralHelpSizer.Add(
+            spectralHint,
+            1,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        spectralHelpButton = wx.Button(
+            parent,
+            label="Spectral Type Help",
+        )
+
+        spectralHelpButton.Bind(
+            wx.EVT_BUTTON,
+            self.showSpectralTypeHelp,
+        )
+
+        spectralHelpSizer.Add(
+            spectralHelpButton,
+            0,
+            wx.LEFT,
+            5,
+        )
+
+        editorSizer.Add(
+            spectralHelpSizer,
             0,
             wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
             5,
         )
 
-        self.applySystemBtn = wx.Button(
-            mainPanel,
+        editorSizer.Add(
+            wx.StaticText(
+                parent,
+                label="Jump Links:",
+            ),
+            0,
+            wx.LEFT | wx.RIGHT | wx.TOP,
+            5,
+        )
+
+        jumpHint = wx.StaticText(
+            parent,
+            label=(
+                "Check every system that should be connected "
+                "to the selected system."
+            ),
+        )
+
+        jumpHint.Wrap(330)
+
+        editorSizer.Add(
+            jumpHint,
+            0,
+            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
+            5,
+        )
+
+        self.jumpSystemList = wx.CheckListBox(
+            parent,
+            size=(-1, 110),
+        )
+
+        self.jumpSystemList.Disable()
+
+        editorSizer.Add(
+            self.jumpSystemList,
+            0,
+            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
+            5,
+        )
+
+        editorButtonSizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.newSystemButton = wx.Button(
+            parent,
+            label="New System",
+        )
+
+        self.newSystemButton.Bind(
+            wx.EVT_BUTTON,
+            self.beginNewSystem,
+        )
+
+        self.newSystemButton.Disable()
+
+        editorButtonSizer.Add(
+            self.newSystemButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.cancelSystemButton = wx.Button(
+            parent,
+            label="Cancel",
+        )
+
+        self.cancelSystemButton.Bind(
+            wx.EVT_BUTTON,
+            self.cancelNewSystem,
+        )
+
+        self.cancelSystemButton.Disable()
+
+        editorButtonSizer.Add(
+            self.cancelSystemButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.applySystemButton = wx.Button(
+            parent,
             label="Apply Changes",
         )
-        self.applySystemBtn.Bind(
+
+        self.applySystemButton.Bind(
             wx.EVT_BUTTON,
             self.applySystemChanges,
         )
-        self.applySystemBtn.Disable()
-        systemEditorSizer.Add(
-            self.applySystemBtn,
+
+        self.applySystemButton.Disable()
+
+        editorButtonSizer.Add(
+            self.applySystemButton,
+            0,
+        )
+
+        editorSizer.Add(
+            editorButtonSizer,
             0,
             wx.ALL | wx.ALIGN_RIGHT,
             5,
         )
 
         inputSizer.Add(
-            systemEditorSizer,
+            editorSizer,
             1,
             wx.TOP | wx.EXPAND,
             5,
         )
 
-        self.mainSizer.Add(inputSizer, 0, wx.ALL | wx.EXPAND, 5)
-
-        # Map display area
-        mapSizer = wx.FlexGridSizer(1, 1, wx.Size(0, 0))
-        mapSizer.AddGrowableCol(0)
-        mapSizer.AddGrowableRow(0)
-        mapSizer.SetFlexibleDirection(wx.BOTH)
-
-        self.mapPanel = SMGMapPanel(mainPanel)
-        mapSizer.Add(self.mapPanel, 1, wx.ALL | wx.EXPAND, 5)
-        self.mainSizer.Add(mapSizer, 1, wx.ALL | wx.EXPAND, 5)
-
-        # Set defaults for the inputs
-        self.setDefaults()
-
-        # Finalize display
-        self.mainSizer.SetSizeHints(self)
-        mainPanel.SetSizer(self.mainSizer)
-        mainPanel.Layout()
-
-        self.Bind(wx.EVT_SIZE, self.onResize)
-        self.Show()
-
     def generateMap(self, event):
+        """Generate a random map or load one from a DAT file."""
+
+        self.isCreatingSystem = False
         self.params = self.createParamDict()
 
         self.loadOrGenerateMapData()
@@ -301,8 +738,13 @@ class SMGFrame(wx.Frame):
         self.drawMap(self.params["filename"])
         self.refreshSystemEditor()
 
+        self.SetStatusText(
+            f"{len(self.starList)} star systems loaded."
+        )
+
     def loadOrGenerateMapData(self):
-        """Load or generate the data that forms the current map."""
+        """Load or generate the current map data."""
+
         self.starList = []
         self.jumpList = []
 
@@ -316,13 +758,21 @@ class SMGFrame(wx.Frame):
                 self.jumpList,
             )
         else:
+            # Start generated names at S000 for every new map.
+            StarSystem.id = 0
+
             self.starList = createSystems(self.params)
             self.jumpList = findJumps(self.starList)
 
-        print("there are", len(self.starList), "systems on the map")
+        print(
+            "there are",
+            len(self.starList),
+            "systems on the map",
+        )
 
     def renderCurrentMap(self):
         """Create the SVG from the current in-memory map state."""
+
         multipleList = findOverlaps(self.starList)
         definitionDictionary = {}
 
@@ -333,7 +783,8 @@ class SMGFrame(wx.Frame):
             definitionDictionary,
         )
 
-        # createMapSymbols assigns drawnPos, which findConnections requires.
+        # createMapSymbols sets drawnPos, which is required
+        # by findConnections.
         connectionList = findConnections(
             self.starList,
             self.jumpList,
@@ -348,12 +799,28 @@ class SMGFrame(wx.Frame):
         )
 
     def saveCurrentMap(self):
-        """Write the current in-memory map state to the configured DAT file."""
-        writeSystemData(self.params, self.starList)
-        writeConnectionData(self.params, self.jumpList)
+        """Write the current state to the DAT file."""
+
+        writeSystemData(
+            self.params,
+            self.starList,
+        )
+
+        writeConnectionData(
+            self.params,
+            self.jumpList,
+        )
+
+    def saveAndRedrawCurrentMap(self):
+        """Save the current data and refresh the SVG preview."""
+
+        self.renderCurrentMap()
+        self.saveCurrentMap()
+        self.drawMap(self.params["filename"])
 
     def refreshSystemEditor(self, selectedIndex=0):
-        """Refresh the system list from the current in-memory map state."""
+        """Refresh the system list from the current map state."""
+
         self.systemList.Freeze()
 
         try:
@@ -361,13 +828,23 @@ class SMGFrame(wx.Frame):
 
             for system in self.starList:
                 self.systemList.Append(
-                    f"{system.name} ({system.x}, {system.y}, {system.z})"
+                    f"{system.name} "
+                    f"({system.x}, {system.y}, {system.z})"
                 )
         finally:
             self.systemList.Thaw()
 
+        self.newSystemButton.Enable(bool(self.params))
+
         if self.starList:
-            selectedIndex = max(0, min(selectedIndex, len(self.starList) - 1))
+            selectedIndex = max(
+                0,
+                min(
+                    selectedIndex,
+                    len(self.starList) - 1,
+                ),
+            )
+
             self.systemList.SetSelection(selectedIndex)
             self.showSystemDetails(selectedIndex)
         else:
@@ -376,14 +853,26 @@ class SMGFrame(wx.Frame):
         self.mainSizer.Layout()
 
     def onSystemSelected(self, event):
-        """Display the system selected in the list."""
-        self.showSystemDetails(event.GetSelection())
+        """Display the selected system."""
+
+        if self.isCreatingSystem:
+            return
+
+        self.showSystemDetails(
+            event.GetSelection()
+        )
 
     def showSystemDetails(self, index):
-        """Load one system into the detail fields."""
-        if index == wx.NOT_FOUND or not 0 <= index < len(self.starList):
+        """Load one star system into the editor."""
+
+        if (
+            index == wx.NOT_FOUND
+            or not 0 <= index < len(self.starList)
+        ):
             self.clearSystemDetails()
             return
+
+        self.leaveCreateMode()
 
         system = self.starList[index]
         self.selectedSystemIndex = index
@@ -392,15 +881,230 @@ class SMGFrame(wx.Frame):
         self.systemX.SetValue(str(system.x))
         self.systemY.SetValue(str(system.y))
         self.systemZ.SetValue(str(system.z))
-        self.systemStarCount.SetValue(str(system.nStars))
-        self.systemSpectralTypes.SetValue(", ".join(system.stars))
-        self.applySystemBtn.Enable()
+        self.systemStarCount.SetValue(
+            str(system.nStars)
+        )
+        self.systemSpectralTypes.SetValue(
+            ", ".join(system.stars)
+        )
+
+        self.refreshJumpEditor(system.name)
+
+        self.applySystemButton.SetLabel(
+            "Apply Changes"
+        )
+        self.applySystemButton.Enable()
+
+    def refreshJumpEditor(self, systemName):
+        """Show all possible links for the selected system."""
+
+        connectedSystems = set()
+
+        if systemName is not None:
+            for firstName, secondName in self.jumpList:
+                if firstName == systemName:
+                    connectedSystems.add(secondName)
+                elif secondName == systemName:
+                    connectedSystems.add(firstName)
+
+        self.jumpSystemList.Freeze()
+
+        try:
+            self.jumpSystemList.Clear()
+
+            for system in self.starList:
+                if system.name == systemName:
+                    continue
+
+                listIndex = self.jumpSystemList.Append(
+                    system.name
+                )
+
+                if system.name in connectedSystems:
+                    self.jumpSystemList.Check(
+                        listIndex,
+                        True,
+                    )
+        finally:
+            self.jumpSystemList.Thaw()
+
+        self.jumpSystemList.Enable(
+            bool(self.starList)
+        )
+
+    def beginNewSystem(self, event):
+        """Switch the editor into creation mode."""
+
+        if not self.params:
+            wx.MessageBox(
+                "Generate or load a map before adding a system.",
+                "No map available",
+                wx.OK | wx.ICON_INFORMATION,
+            )
+            return
+
+        self.creationReturnIndex = (
+            self.systemList.GetSelection()
+        )
+
+        currentSelection = self.systemList.GetSelection()
+
+        if currentSelection != wx.NOT_FOUND:
+            self.systemList.Deselect(currentSelection)
+
+        self.isCreatingSystem = True
+        self.selectedSystemIndex = wx.NOT_FOUND
+
+        self.systemList.Disable()
+        self.newSystemButton.Disable()
+        self.cancelSystemButton.Enable()
+
+        self.applySystemButton.SetLabel(
+            "Create System"
+        )
+        self.applySystemButton.Enable()
+
+        self.systemName.SetValue(
+            self.createUniqueSystemName()
+        )
+        self.systemX.SetValue("1")
+        self.systemY.SetValue("1")
+        self.systemZ.SetValue(
+            str(
+                min(
+                    max(0, self.params["minZ"]),
+                    self.params["maxZ"],
+                )
+            )
+        )
+        self.systemStarCount.SetValue("1")
+        self.systemSpectralTypes.SetValue("G2")
+
+        # A new system may be linked to any existing system.
+        self.refreshJumpEditor(None)
+
+        self.systemName.SetFocus()
+        self.systemName.SelectAll()
+
+        self.SetStatusText(
+            "Enter the values for the new star system."
+        )
+
+    def cancelNewSystem(self, event):
+        """Cancel creation of a new system."""
+
+        returnIndex = self.creationReturnIndex
+
+        self.leaveCreateMode()
+
+        if self.starList:
+            if (
+                returnIndex == wx.NOT_FOUND
+                or returnIndex >= len(self.starList)
+            ):
+                returnIndex = 0
+
+            self.systemList.SetSelection(returnIndex)
+            self.showSystemDetails(returnIndex)
+        else:
+            self.clearSystemDetails()
+
+        self.SetStatusText(
+            "New star system creation cancelled."
+        )
+
+    def leaveCreateMode(self):
+        """Restore the normal editor controls."""
+
+        self.isCreatingSystem = False
+        self.creationReturnIndex = wx.NOT_FOUND
+
+        self.systemList.Enable()
+        self.newSystemButton.Enable(bool(self.params))
+        self.cancelSystemButton.Disable()
+
+        self.applySystemButton.SetLabel(
+            "Apply Changes"
+        )
+
+    def createUniqueSystemName(self):
+        """Create a default name that is not already used."""
+
+        existingNames = {
+            system.name
+            for system in self.starList
+        }
+
+        baseName = "New System"
+
+        if baseName not in existingNames:
+            return baseName
+
+        number = 2
+
+        while f"{baseName} {number}" in existingNames:
+            number += 1
+
+        return f"{baseName} {number}"
 
     def applySystemChanges(self, event):
-        """Validate and apply edits to the selected star system."""
+        """Create or update a star system."""
+
+        if self.isCreatingSystem:
+            self.createNewSystem()
+        else:
+            self.updateSelectedSystem()
+
+    def createNewSystem(self):
+        """Create a star system from the editor values."""
+
+        try:
+            values = self.readSystemEditorValues(
+                wx.NOT_FOUND
+            )
+        except ValueError as error:
+            self.showValidationError(error)
+            return
+
+        checkedLinks = self.getCheckedJumpNames()
+
+        system = StarSystem(
+            self.params,
+            generate=False,
+        )
+
+        self.applyValuesToSystem(
+            system,
+            values,
+        )
+
+        self.starList.append(system)
+
+        newIndex = len(self.starList) - 1
+
+        self.updateSystemJumps(
+            oldName=None,
+            newName=system.name,
+            targetNames=checkedLinks,
+        )
+
+        self.leaveCreateMode()
+        self.saveAndRedrawCurrentMap()
+        self.refreshSystemEditor(newIndex)
+
+        self.SetStatusText(
+            f'Star system "{system.name}" was created.'
+        )
+
+    def updateSelectedSystem(self):
+        """Update the currently selected star system."""
+
         index = self.selectedSystemIndex
 
-        if index == wx.NOT_FOUND or not 0 <= index < len(self.starList):
+        if (
+            index == wx.NOT_FOUND
+            or not 0 <= index < len(self.starList)
+        ):
             wx.MessageBox(
                 "Select a star system before applying changes.",
                 "No star system selected",
@@ -409,68 +1113,105 @@ class SMGFrame(wx.Frame):
             return
 
         try:
-            name = self.validateSystemName(
-                self.systemName.GetValue(),
-                index,
-            )
-            x = self.parseCoordinate(
-                self.systemX.GetValue(),
-                "X",
-                1,
-                self.params["maxX"],
-            )
-            y = self.parseCoordinate(
-                self.systemY.GetValue(),
-                "Y",
-                1,
-                self.params["maxY"],
-            )
-            z = self.parseCoordinate(
-                self.systemZ.GetValue(),
-                "Z",
-                self.params["minZ"],
-                self.params["maxZ"],
-            )
-            spectralTypes = self.parseSpectralTypes(
-                self.systemSpectralTypes.GetValue()
-            )
+            values = self.readSystemEditorValues(index)
         except ValueError as error:
-            wx.MessageBox(
-                str(error),
-                "Invalid star system data",
-                wx.OK | wx.ICON_ERROR,
-            )
+            self.showValidationError(error)
             return
+
+        checkedLinks = self.getCheckedJumpNames()
 
         system = self.starList[index]
         oldName = system.name
 
-        system.name = name
-        system.x = x
-        system.y = y
-        system.z = z
-        system.mapPos = (x, y)
-        system.stars = spectralTypes
-        system.nStars = len(spectralTypes)
+        self.applyValuesToSystem(
+            system,
+            values,
+        )
 
-        if oldName != name:
-            self.renameSystemInJumps(oldName, name)
+        self.updateSystemJumps(
+            oldName=oldName,
+            newName=system.name,
+            targetNames=checkedLinks,
+        )
 
-        self.renderCurrentMap()
-        self.saveCurrentMap()
-        self.drawMap(self.params["filename"])
+        self.saveAndRedrawCurrentMap()
         self.refreshSystemEditor(index)
 
         self.SetStatusText(
-            f'Changes to "{name}" were saved to the SVG and DAT files.'
+            f'Changes to "{system.name}" were saved.'
         )
 
-    def validateSystemName(self, value, selectedIndex):
-        """Return a valid, unique system name."""
+    def readSystemEditorValues(self, selectedIndex):
+        """Validate and return all editable values."""
+
+        name = self.validateSystemName(
+            self.systemName.GetValue(),
+            selectedIndex,
+        )
+
+        x = self.parseCoordinate(
+            self.systemX.GetValue(),
+            "X",
+            1,
+            self.params["maxX"],
+        )
+
+        y = self.parseCoordinate(
+            self.systemY.GetValue(),
+            "Y",
+            1,
+            self.params["maxY"],
+        )
+
+        z = self.parseCoordinate(
+            self.systemZ.GetValue(),
+            "Z",
+            self.params["minZ"],
+            self.params["maxZ"],
+        )
+
+        spectralTypes = self.parseSpectralTypes(
+            self.systemSpectralTypes.GetValue()
+        )
+
+        return {
+            "name": name,
+            "x": x,
+            "y": y,
+            "z": z,
+            "stars": spectralTypes,
+        }
+
+    def applyValuesToSystem(self, system, values):
+        """Copy validated editor values into a system."""
+
+        system.name = values["name"]
+
+        system.x = values["x"]
+        system.y = values["y"]
+        system.z = values["z"]
+
+        system.mapPos = (
+            system.x,
+            system.y,
+        )
+
+        system.stars = values["stars"]
+        system.nStars = len(system.stars)
+
+    def validateSystemName(
+        self,
+        value,
+        selectedIndex=wx.NOT_FOUND,
+    ):
+        """Return a valid and unique system name."""
+
         name = value.strip()
 
         if not name:
-            raise ValueError("The system name must not be empty.")
+            raise ValueError(
+                "The system name must not be empty."
+            )
 
         if '"' in name:
             raise ValueError(
@@ -478,15 +1219,25 @@ class SMGFrame(wx.Frame):
             )
 
         for index, system in enumerate(self.starList):
-            if index != selectedIndex and system.name == name:
+            if (
+                index != selectedIndex
+                and system.name == name
+            ):
                 raise ValueError(
                     f'A star system named "{name}" already exists.'
                 )
 
         return name
 
-    def parseCoordinate(self, value, label, minimum, maximum):
-        """Parse and validate one map coordinate."""
+    def parseCoordinate(
+        self,
+        value,
+        label,
+        minimum,
+        maximum,
+    ):
+        """Parse and validate one coordinate."""
+
         try:
             coordinate = int(value.strip())
         except ValueError as error:
@@ -496,16 +1247,25 @@ class SMGFrame(wx.Frame):
 
         if not minimum <= coordinate <= maximum:
             raise ValueError(
-                f"{label} must be between {minimum} and {maximum}."
+                f"{label} must be between "
+                f"{minimum} and {maximum}."
             )
 
         return coordinate
 
     def parseSpectralTypes(self, value):
-        """Parse and validate the comma-separated spectral type list."""
+        """Parse and validate the spectral type list."""
+
         spectralTypes = [
-            re.sub(r"\s+", "", item).upper()
-            for item in re.split(r"[,;\r\n]+", value)
+            re.sub(
+                r"\s+",
+                "",
+                item,
+            ).upper()
+            for item in re.split(
+                r"[,;\r\n]+",
+                value,
+            )
             if item.strip()
         ]
 
@@ -516,12 +1276,18 @@ class SMGFrame(wx.Frame):
 
         if len(spectralTypes) > 10:
             raise ValueError(
-                "The map renderer supports at most 10 stars per system."
+                "The map renderer supports at most "
+                "10 stars per system."
             )
 
         pattern = re.compile(
-            r"^(?:BD|WD|NS|BH|[OBAFGKM][0-9]|[FGKM][0-9](?:III|I))$"
+            r"^(?:"
+            r"BD|WD|NS|BH|"
+            r"[OBAFGKM][0-9]|"
+            r"[FGKM][0-9](?:III|I)"
+            r")$"
         )
+
         invalidTypes = [
             spectralType
             for spectralType in spectralTypes
@@ -530,38 +1296,303 @@ class SMGFrame(wx.Frame):
 
         if invalidTypes:
             invalidText = ", ".join(invalidTypes)
+
             raise ValueError(
                 "Unsupported spectral type(s): "
-                f"{invalidText}. Use values such as G2, M4, K0III, "
-                "BD, WD, NS, or BH. Main-sequence stars are written "
-                "without a trailing V."
+                f"{invalidText}.\n\n"
+                "Use values such as G2, M4, K0III, M2I, "
+                "BD, WD, NS, or BH."
             )
 
         return spectralTypes
 
-    def renameSystemInJumps(self, oldName, newName):
-        """Keep existing jump connections valid after a system rename."""
-        self.jumpList = [
-            (
-                newName if startName == oldName else startName,
-                newName if endName == oldName else endName,
+    def showValidationError(self, error):
+        """Display a validation error."""
+
+        wx.MessageBox(
+            str(error),
+            "Invalid star system data",
+            wx.OK | wx.ICON_ERROR,
+        )
+
+    def getCheckedJumpNames(self):
+        """Return the names checked in the jump link list."""
+
+        return [
+            self.jumpSystemList.GetString(index)
+            for index in range(
+                self.jumpSystemList.GetCount()
             )
-            for startName, endName in self.jumpList
+            if self.jumpSystemList.IsChecked(index)
         ]
 
+    def updateSystemJumps(
+        self,
+        oldName,
+        newName,
+        targetNames,
+    ):
+        """Replace all links belonging to one system."""
+
+        namesToReplace = {newName}
+
+        if oldName is not None:
+            namesToReplace.add(oldName)
+
+        validSystemNames = {
+            system.name
+            for system in self.starList
+        }
+
+        newJumpList = []
+        existingPairs = set()
+
+        # Keep links that do not belong to the edited system.
+        for firstName, secondName in self.jumpList:
+            if (
+                firstName in namesToReplace
+                or secondName in namesToReplace
+            ):
+                continue
+
+            if (
+                firstName not in validSystemNames
+                or secondName not in validSystemNames
+                or firstName == secondName
+            ):
+                continue
+
+            pair = self.normaliseJumpPair(
+                firstName,
+                secondName,
+            )
+
+            if pair not in existingPairs:
+                newJumpList.append(pair)
+                existingPairs.add(pair)
+
+        # Add the checked links.
+        for targetName in targetNames:
+            if (
+                targetName == newName
+                or targetName not in validSystemNames
+            ):
+                continue
+
+            pair = self.normaliseJumpPair(
+                newName,
+                targetName,
+            )
+
+            if pair not in existingPairs:
+                newJumpList.append(pair)
+                existingPairs.add(pair)
+
+        newJumpList.sort(
+            key=lambda pair: (
+                pair[0].casefold(),
+                pair[1].casefold(),
+            )
+        )
+
+        self.jumpList = newJumpList
+
+    def normaliseJumpPair(
+        self,
+        firstName,
+        secondName,
+    ):
+        """Create a stable representation of an undirected link."""
+
+        if firstName.casefold() <= secondName.casefold():
+            return firstName, secondName
+
+        return secondName, firstName
+
     def clearSystemDetails(self):
-        """Clear the system detail fields when no map is loaded."""
+        """Clear the system editor."""
+
+        self.leaveCreateMode()
         self.selectedSystemIndex = wx.NOT_FOUND
+
         self.systemName.SetValue("")
         self.systemX.SetValue("")
         self.systemY.SetValue("")
         self.systemZ.SetValue("")
         self.systemStarCount.SetValue("")
         self.systemSpectralTypes.SetValue("")
-        self.applySystemBtn.Disable()
+
+        self.jumpSystemList.Clear()
+        self.jumpSystemList.Disable()
+
+        self.applySystemButton.Disable()
+        self.cancelSystemButton.Disable()
+
+        self.newSystemButton.Enable(bool(self.params))
+
+    def showSpectralTypeHelp(self, event):
+        """Show an explanation of the supported spectral types."""
+
+        helpText = """SPECTRAL CLASSES
+
+The first letter describes the spectral class and roughly the
+temperature and colour of the star.
+
+O  blue, extremely hot
+B  blue-white
+A  white
+F  yellow-white
+G  yellow
+K  orange
+M  red, comparatively cool
+
+The sequence runs from hot to cool:
+
+O - B - A - F - G - K - M
+
+
+NUMBER
+
+The number subdivides a spectral class from 0 to 9.
+
+0 is the hotter end of the class.
+9 is the cooler end of the class.
+
+Examples:
+
+G2  a relatively hot G-class star
+G8  a cooler G-class star
+M4  a red M-class star
+
+
+LUMINOSITY CLASSES
+
+No suffix
+    Main-sequence star in this program.
+
+III
+    Giant star.
+
+I
+    Supergiant star.
+
+Examples:
+
+G2
+    G-class main-sequence star.
+
+K3III
+    K-class giant.
+
+M2I
+    M-class supergiant.
+
+
+SPECIAL TYPES
+
+BD
+    Brown dwarf.
+
+WD
+    White dwarf.
+
+NS
+    Neutron star.
+
+BH
+    Black hole.
+
+
+SUPPORTED INPUT
+
+Main-sequence stars:
+
+O0-O9
+B0-B9
+A0-A9
+F0-F9
+G0-G9
+K0-K9
+M0-M9
+
+Giants and supergiants:
+
+F0III-F9III
+G0III-G9III
+K0III-K9III
+M0III-M9III
+
+F0I-F9I
+G0I-G9I
+K0I-K9I
+M0I-M9I
+
+Special objects:
+
+BD, WD, NS, BH
+
+Multiple stars may be separated with commas, semicolons,
+or new lines.
+
+Example:
+
+G2, M4, WD
+"""
+
+        dialog = wx.Dialog(
+            self,
+            title="Spectral Type Help",
+            size=(560, 620),
+            style=(
+                wx.DEFAULT_DIALOG_STYLE
+                | wx.RESIZE_BORDER
+            ),
+        )
+
+        dialogSizer = wx.BoxSizer(wx.VERTICAL)
+
+        helpField = wx.TextCtrl(
+            dialog,
+            value=helpText,
+            style=(
+                wx.TE_MULTILINE
+                | wx.TE_READONLY
+                | wx.TE_RICH2
+            ),
+        )
+
+        dialogSizer.Add(
+            helpField,
+            1,
+            wx.ALL | wx.EXPAND,
+            10,
+        )
+
+        closeButton = wx.Button(
+            dialog,
+            wx.ID_OK,
+            label="Close",
+        )
+
+        dialogSizer.Add(
+            closeButton,
+            0,
+            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.ALIGN_RIGHT,
+            10,
+        )
+
+        dialog.SetSizer(dialogSizer)
+
+        try:
+            dialog.ShowModal()
+        finally:
+            dialog.Destroy()
 
     def resetParameters(self, event):
         self.setDefaults()
+        self.SetStatusText(
+            "Map parameters reset."
+        )
 
     def setDefaults(self):
         self.xSize.SetValue(20)
@@ -576,21 +1607,33 @@ class SMGFrame(wx.Frame):
 
     def createParamDict(self):
         params = {}
+
         params["maxX"] = self.xSize.GetValue()
         params["maxY"] = self.ySize.GetValue()
 
         zValue = self.zSize.GetValue() // 2
+
         params["minZ"] = -zValue
         params["maxZ"] = zValue
 
         if self.zSize.GetValue() % 2 == 0:
             params["minZ"] += 1
 
-        params["stellarDensity"] = self.stellarDensity.GetValue()
-        params["filename"] = self.outMapName.GetValue()
-        params["datafile"] = self.outDataName.GetValue()
-        params["scale"] = self.textScale.GetValue()
-        params["printZ"] = self.printZ.GetValue()
+        params["stellarDensity"] = (
+            self.stellarDensity.GetValue()
+        )
+        params["filename"] = (
+            self.outMapName.GetValue()
+        )
+        params["datafile"] = (
+            self.outDataName.GetValue()
+        )
+        params["scale"] = (
+            self.textScale.GetValue()
+        )
+        params["printZ"] = (
+            self.printZ.GetValue()
+        )
 
         return params
 
@@ -603,4 +1646,4 @@ class SMGFrame(wx.Frame):
     def onResize(self, event):
         self.Update()
         self.Refresh()
-        wx.Event.Skip(event)
+        event.Skip()
