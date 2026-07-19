@@ -194,6 +194,11 @@ class SMGFrame(wx.Frame):
             inputSizer,
         )
 
+        self.createMapBoundsControls(
+            mainPanel,
+            inputSizer,
+        )
+
         self.createSystemEditor(
             mainPanel,
             inputSizer,
@@ -248,15 +253,14 @@ class SMGFrame(wx.Frame):
         self.Show()
 
     def createParameterControls(self, parent, inputSizer):
-        """Create the controls used to generate or load a map."""
+        """Create the file and random generation controls."""
 
-        dataSizer = wx.StaticBoxSizer(
-            wx.VERTICAL,
-            parent,
-            label="Map Parameters",
-        )
-
-        def addControlRow(label, control, top=10):
+        def addControlRow(
+                containerSizer,
+                label,
+                control,
+                top=10,
+        ):
             row = wx.BoxSizer(wx.HORIZONTAL)
 
             row.Add(
@@ -274,48 +278,21 @@ class SMGFrame(wx.Frame):
                 0,
                 wx.ALL | wx.EXPAND,
                 5,
-                )
+            )
 
-            dataSizer.Add(
+            containerSizer.Add(
                 row,
                 0,
                 wx.ALIGN_RIGHT,
             )
 
-        # X dimension
-        self.xSize = wx.lib.intctrl.IntCtrl(
+        # General map and file settings
+        dataSizer = wx.StaticBoxSizer(
+            wx.VERTICAL,
             parent,
-            min=1,
+            label="Map Files and Display",
         )
 
-        addControlRow(
-            "Map Width (x):",
-            self.xSize,
-        )
-
-        # Y dimension
-        self.ySize = wx.lib.intctrl.IntCtrl(
-            parent,
-            min=1,
-        )
-
-        addControlRow(
-            "Map Height (y):",
-            self.ySize,
-        )
-
-        # Z dimension
-        self.zSize = wx.lib.intctrl.IntCtrl(
-            parent,
-            min=1,
-        )
-
-        addControlRow(
-            "Map Thickness (z):",
-            self.zSize,
-        )
-
-        # Text scale
         self.textScale = NumCtrl(
             parent,
             min=0.25,
@@ -323,30 +300,30 @@ class SMGFrame(wx.Frame):
         )
 
         addControlRow(
+            dataSizer,
             "Text Scale:",
             self.textScale,
         )
 
-        # Output SVG filename
         self.outMapName = wx.TextCtrl(parent)
 
         addControlRow(
+            dataSizer,
             "Output Map Filename:",
             self.outMapName,
         )
 
-        # DAT filename used for both loading and saving
         self.dataName = wx.TextCtrl(parent)
 
         addControlRow(
+            dataSizer,
             "Data Filename:",
             self.dataName,
         )
 
-        # Print Z coordinate
-        row = wx.BoxSizer(wx.HORIZONTAL)
+        printZRow = wx.BoxSizer(wx.HORIZONTAL)
 
-        row.Add(
+        printZRow.Add(
             wx.StaticText(
                 parent,
                 label="Print Z coordinate:",
@@ -358,7 +335,7 @@ class SMGFrame(wx.Frame):
 
         self.printZ = wx.CheckBox(parent)
 
-        row.Add(
+        printZRow.Add(
             self.printZ,
             0,
             wx.ALL,
@@ -366,7 +343,7 @@ class SMGFrame(wx.Frame):
         )
 
         dataSizer.Add(
-            row,
+            printZRow,
             0,
             wx.ALIGN_RIGHT,
         )
@@ -377,23 +354,44 @@ class SMGFrame(wx.Frame):
             wx.EXPAND,
         )
 
-        # Parameters used only by the random generator
+        # Settings used only when generating a new random map.
         randomSizer = wx.StaticBoxSizer(
             wx.VERTICAL,
             parent,
             label="Random Generation",
         )
 
-        densityRow = wx.BoxSizer(wx.HORIZONTAL)
+        self.xSize = wx.lib.intctrl.IntCtrl(
+            parent,
+            min=1,
+        )
 
-        densityRow.Add(
-            wx.StaticText(
-                parent,
-                label="Stellar Density:",
-            ),
-            0,
-            wx.TOP,
-            10,
+        addControlRow(
+            randomSizer,
+            "Map Width (x):",
+            self.xSize,
+        )
+
+        self.ySize = wx.lib.intctrl.IntCtrl(
+            parent,
+            min=1,
+        )
+
+        addControlRow(
+            randomSizer,
+            "Map Height (y):",
+            self.ySize,
+        )
+
+        self.zSize = wx.lib.intctrl.IntCtrl(
+            parent,
+            min=1,
+        )
+
+        addControlRow(
+            randomSizer,
+            "Map Thickness (z):",
+            self.zSize,
         )
 
         self.stellarDensity = NumCtrl(
@@ -402,17 +400,10 @@ class SMGFrame(wx.Frame):
             fractionWidth=4,
         )
 
-        densityRow.Add(
+        addControlRow(
+            randomSizer,
+            "Stellar Density:",
             self.stellarDensity,
-            0,
-            wx.ALL | wx.EXPAND,
-            5,
-            )
-
-        randomSizer.Add(
-            densityRow,
-            0,
-            wx.ALIGN_RIGHT,
         )
 
         generateButton = wx.Button(
@@ -430,16 +421,15 @@ class SMGFrame(wx.Frame):
             0,
             wx.ALL | wx.ALIGN_RIGHT,
             5,
-            )
+        )
 
         inputSizer.Add(
             randomSizer,
             0,
             wx.TOP | wx.EXPAND,
             5,
-            )
+        )
 
-        # General actions
         buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
 
         loadButton = wx.Button(
@@ -481,7 +471,119 @@ class SMGFrame(wx.Frame):
             0,
             wx.ALL | wx.CENTER,
             5,
+        )
+
+    def createMapBoundsControls(
+            self,
+            parent,
+            inputSizer,
+    ):
+        """Create controls for extending the loaded map."""
+
+        boundsSizer = wx.StaticBoxSizer(
+            wx.VERTICAL,
+            parent,
+            label="Map Bounds",
+        )
+
+        self.mapBoundsLabel = wx.StaticText(
+            parent,
+            label="No map loaded.",
+        )
+
+        self.mapBoundsLabel.Wrap(330)
+
+        boundsSizer.Add(
+            self.mapBoundsLabel,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+        )
+
+        amountSizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        amountSizer.Add(
+            wx.StaticText(
+                parent,
+                label="Extend by:",
+            ),
+            0,
+            wx.ALIGN_CENTER_VERTICAL | wx.RIGHT,
+            5,
+        )
+
+        self.extendAmount = wx.lib.intctrl.IntCtrl(
+            parent,
+            min=1,
+        )
+
+        self.extendAmount.SetValue(5)
+        self.extendAmount.Disable()
+
+        amountSizer.Add(
+            self.extendAmount,
+            0,
+        )
+
+        boundsSizer.Add(
+            amountSizer,
+            0,
+            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.ALIGN_RIGHT,
+            5,
+        )
+
+        buttonGrid = wx.GridSizer(
+            rows=2,
+            cols=3,
+            vgap=5,
+            hgap=5,
+        )
+
+        buttonDefinitions = [
+            ("X -", "x-"),
+            ("Y -", "y-"),
+            ("Z -", "z-"),
+            ("X +", "x+"),
+            ("Y +", "y+"),
+            ("Z +", "z+"),
+        ]
+
+        self.mapBoundsButtons = []
+
+        for label, direction in buttonDefinitions:
+            button = wx.Button(
+                parent,
+                label=label,
             )
+
+            button.Bind(
+                wx.EVT_BUTTON,
+                lambda event, value=direction:
+                self.extendMap(value),
+            )
+
+            button.Disable()
+            self.mapBoundsButtons.append(button)
+
+            buttonGrid.Add(
+                button,
+                1,
+                wx.EXPAND,
+            )
+
+        boundsSizer.Add(
+            buttonGrid,
+            0,
+            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
+            5,
+        )
+
+        inputSizer.Add(
+            boundsSizer,
+            0,
+            wx.TOP | wx.EXPAND,
+            5,
+        )
 
     def createSystemEditor(self, parent, inputSizer):
         """Create the star system and jump link editor."""
@@ -909,7 +1011,7 @@ class SMGFrame(wx.Frame):
                 "Enter a data filename before generating the map.",
                 "Missing Data Filename",
                 wx.OK | wx.ICON_INFORMATION,
-                )
+            )
             return
 
         if not params["filename"]:
@@ -917,7 +1019,7 @@ class SMGFrame(wx.Frame):
                 "Enter an output map filename before generating the map.",
                 "Missing Map Filename",
                 wx.OK | wx.ICON_INFORMATION,
-                )
+            )
             return
 
         # Start generated names at S000 for each new map.
@@ -937,6 +1039,7 @@ class SMGFrame(wx.Frame):
         self.saveCurrentMap()
         self.drawMap(self.params["filename"])
         self.refreshSystemEditor()
+        self.refreshMapBounds()
 
         self.SetStatusText(
             f"{len(self.starList)} star systems were randomly generated."
@@ -989,6 +1092,7 @@ class SMGFrame(wx.Frame):
         self.renderCurrentMap()
         self.saveCurrentMap()
         self.drawMap(self.params["filename"])
+        self.refreshMapBounds()
 
     def refreshSystemEditor(self, selectedIndex=0):
         """Refresh the system list from the current map state."""
@@ -1159,8 +1263,25 @@ class SMGFrame(wx.Frame):
         self.systemName.SetValue(
             self.createUniqueSystemName()
         )
-        self.systemX.SetValue("1")
-        self.systemY.SetValue("1")
+
+        self.systemX.SetValue(
+            str(
+                min(
+                    max(0, self.params["minX"]),
+                    self.params["maxX"],
+                )
+            )
+        )
+
+        self.systemY.SetValue(
+            str(
+                min(
+                    max(0, self.params["minY"]),
+                    self.params["maxY"],
+                )
+            )
+        )
+
         self.systemZ.SetValue(
             str(
                 min(
@@ -1169,6 +1290,7 @@ class SMGFrame(wx.Frame):
                 )
             )
         )
+
         self.systemStarCount.SetValue("1")
         self.systemSpectralTypes.SetValue("G2")
 
@@ -1220,24 +1342,39 @@ class SMGFrame(wx.Frame):
         )
 
     def createUniqueSystemName(self):
-        """Create a default name that is not already used."""
+        """Create the next available sequential system name."""
 
         existingNames = {
-            system.name
+            system.name.casefold()
             for system in self.starList
         }
 
-        baseName = "New System"
+        highestNumber = -1
 
-        if baseName not in existingNames:
-            return baseName
+        for system in self.starList:
+            match = re.fullmatch(
+                r"S(\d+)",
+                system.name.strip(),
+                re.IGNORECASE,
+            )
 
-        number = 2
+            if match is None:
+                continue
 
-        while f"{baseName} {number}" in existingNames:
-            number += 1
+            highestNumber = max(
+                highestNumber,
+                int(match.group(1)),
+            )
 
-        return f"{baseName} {number}"
+        nextNumber = highestNumber + 1
+
+        while (
+                f"S{nextNumber:03d}".casefold()
+                in existingNames
+        ):
+            nextNumber += 1
+
+        return f"S{nextNumber:03d}"
 
     def applySystemChanges(self, event):
         """Create or update a star system."""
@@ -1327,6 +1464,11 @@ class SMGFrame(wx.Frame):
     def readSystemEditorValues(self, selectedIndex):
         """Validate and return all editable values."""
 
+        if not self.hasCurrentMapBounds():
+            raise ValueError(
+                "No valid map bounds are available."
+            )
+
         name = self.validateSystemName(
             self.systemName.GetValue(),
             selectedIndex,
@@ -1335,14 +1477,14 @@ class SMGFrame(wx.Frame):
         x = self.parseCoordinate(
             self.systemX.GetValue(),
             "X",
-            1,
+            self.params["minX"],
             self.params["maxX"],
         )
 
         y = self.parseCoordinate(
             self.systemY.GetValue(),
             "Y",
-            1,
+            self.params["minY"],
             self.params["maxY"],
         )
 
@@ -1364,6 +1506,26 @@ class SMGFrame(wx.Frame):
             "z": z,
             "stars": spectralTypes,
         }
+
+    def hasCurrentMapBounds(self):
+        """Return whether the current map has complete bounds."""
+
+        requiredKeys = (
+            "minX",
+            "maxX",
+            "minY",
+            "maxY",
+            "minZ",
+            "maxZ",
+        )
+
+        return (
+                bool(self.params)
+                and all(
+            key in self.params
+            for key in requiredKeys
+        )
+        )
 
     def applyValuesToSystem(self, system, values):
         """Copy validated editor values into a system."""
@@ -1700,9 +1862,15 @@ G2, M4, WD
         self.printZ.SetValue(True)
 
     def createParamDict(self):
+        """Create parameters for generating a new random map."""
+
         params = {}
 
+        # New randomly generated maps begin at X=1 and Y=1.
+        params["minX"] = 1
         params["maxX"] = self.xSize.GetValue()
+
+        params["minY"] = 1
         params["maxY"] = self.ySize.GetValue()
 
         zValue = self.zSize.GetValue() // 2
@@ -1716,20 +1884,142 @@ G2, M4, WD
         params["stellarDensity"] = (
             self.stellarDensity.GetValue()
         )
+
         params["filename"] = (
             self.outMapName.GetValue().strip()
         )
+
         params["datafile"] = (
             self.dataName.GetValue().strip()
         )
+
         params["scale"] = (
             self.textScale.GetValue()
         )
+
         params["printZ"] = (
             self.printZ.GetValue()
         )
 
         return params
+
+    def refreshMapBounds(self):
+        """Display the current absolute map bounds."""
+
+        requiredKeys = (
+            "minX",
+            "maxX",
+            "minY",
+            "maxY",
+            "minZ",
+            "maxZ",
+        )
+
+        hasMapBounds = (
+                bool(self.params)
+                and all(
+            key in self.params
+            for key in requiredKeys
+        )
+        )
+
+        if not hasMapBounds:
+            self.mapBoundsLabel.SetLabel(
+                "No map loaded."
+            )
+
+            self.extendAmount.Disable()
+
+            for button in self.mapBoundsButtons:
+                button.Disable()
+
+            return
+
+        width = (
+                self.params["maxX"]
+                - self.params["minX"]
+                + 1
+        )
+
+        height = (
+                self.params["maxY"]
+                - self.params["minY"]
+                + 1
+        )
+
+        depth = (
+                self.params["maxZ"]
+                - self.params["minZ"]
+                + 1
+        )
+
+        self.mapBoundsLabel.SetLabel(
+            f'X: {self.params["minX"]} to '
+            f'{self.params["maxX"]} '
+            f"({width} cells)\n"
+            f'Y: {self.params["minY"]} to '
+            f'{self.params["maxY"]} '
+            f"({height} cells)\n"
+            f'Z: {self.params["minZ"]} to '
+            f'{self.params["maxZ"]} '
+            f"({depth} levels)"
+        )
+
+        self.extendAmount.Enable()
+
+        for button in self.mapBoundsButtons:
+            button.Enable()
+
+        self.mainSizer.Layout()
+
+    def extendMap(self, direction):
+        """Extend the current map in one direction."""
+
+        directionDefinitions = {
+            "x-": ("minX", -1, "negative X"),
+            "x+": ("maxX", 1, "positive X"),
+            "y-": ("minY", -1, "negative Y"),
+            "y+": ("maxY", 1, "positive Y"),
+            "z-": ("minZ", -1, "negative Z"),
+            "z+": ("maxZ", 1, "positive Z"),
+        }
+
+        if direction not in directionDefinitions:
+            return
+
+        if not self.hasCurrentMapBounds():
+            wx.MessageBox(
+                "Generate or load a map before extending it.",
+                "No Map Available",
+                wx.OK | wx.ICON_INFORMATION,
+            )
+            return
+
+        amount = self.extendAmount.GetValue()
+
+        if amount < 1:
+            wx.MessageBox(
+                "The extension amount must be at least 1.",
+                "Invalid Extension Amount",
+                wx.OK | wx.ICON_ERROR,
+            )
+            return
+
+        parameterName, factor, label = (
+            directionDefinitions[direction]
+        )
+
+        # This updates the actual map model.
+        self.params[parameterName] += (
+                factor * amount
+        )
+
+        self.saveAndRedrawCurrentMap()
+
+        self.SetStatusText(
+            f"Map extended by {amount} "
+            f"unit(s) towards {label}."
+        )
 
     def drawMap(self, file):
         self.mapPanel.setMap(file)
@@ -2039,26 +2329,26 @@ G2, M4, WD
 
         params = self.createParamDict()
         dataFilename = params["datafile"]
-    
+
         if not dataFilename:
             wx.MessageBox(
                 "Enter the DAT file that should be loaded.",
                 "Missing Data Filename",
                 wx.OK | wx.ICON_INFORMATION,
-                )
+            )
             return
-    
+
         if not params["filename"]:
             wx.MessageBox(
                 "Enter an output map filename for the generated SVG.",
                 "Missing Map Filename",
                 wx.OK | wx.ICON_INFORMATION,
-                )
+            )
             return
-    
+
         loadedStarList = []
         loadedJumpList = []
-    
+
         try:
             loadData(
                 dataFilename,
@@ -2071,20 +2361,21 @@ G2, M4, WD
                 str(error),
                 "Unable to Load Map",
                 wx.OK | wx.ICON_ERROR,
-                )
+            )
             return
-    
+
         self.isCreatingSystem = False
         self.creationReturnIndex = wx.NOT_FOUND
-    
+
         self.params = params
         self.starList = loadedStarList
         self.jumpList = loadedJumpList
-    
+
         self.renderCurrentMap()
         self.drawMap(self.params["filename"])
         self.refreshSystemEditor()
-    
+        self.refreshMapBounds()
+
         self.SetStatusText(
             f"{len(self.starList)} star systems were loaded "
             f'from "{dataFilename}".'

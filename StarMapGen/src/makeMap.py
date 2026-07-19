@@ -28,6 +28,7 @@ JUMP_STATUS_STYLES = {
     },
 }
 
+
 def createDef(spType, starData, dDict):
     """Create the gradient definitions for the star symbols
 
@@ -266,28 +267,35 @@ def writeSymbols(f, sList):
 
 
 def createSystems(p):
-    """Create all the star systems
+    """Create randomly generated star systems."""
 
-    This function first generates the number of systems based on the
-    map dimensions and the specified stellar density
+    minX = p.get("minX", 1)
+    minY = p.get("minY", 1)
 
-    After the number of systems are determined, a list of StarSystem
-    objects is created and returned holding the calculated number of
-    systems.
+    mapWidth = p["maxX"] - minX + 1
+    mapHeight = p["maxY"] - minY + 1
+    mapDepth = p["maxZ"] - p["minZ"] + 1
 
-    Inputs:
-        p - The map parameter dictionary
+    volume = (
+            mapWidth
+            * mapHeight
+            * mapDepth
+    )
 
-    Outputs:
-        sList - List of Star System Objects
-    """
+    nStars = int(
+        round(
+            volume * p["stellarDensity"]
+        )
+    )
 
-    volume = p["maxX"] * p["maxY"] * (1 + p["maxZ"] - p["minZ"])
-    nStars = int(round(volume * p["stellarDensity"]))
-    sList = []
-    for i in range(nStars):
-        sList.append(StarSystem(p))
-    return sList
+    systemList = []
+
+    for _ in range(nStars):
+        systemList.append(
+            StarSystem(p)
+        )
+
+    return systemList
 
 
 def findOverlaps(sList):
@@ -349,45 +357,124 @@ def getTweakOffset(sList):
     return offset
 
 
-def createMapSymbols(p, systemList, mList, defDict):
+def createMapSymbols(
+        p,
+        systemList,
+        mList,
+        defDict,
+):
     symbolList = []
     dupList = {}
-    systemOffsets = [(0, 0), (-30, 30), (30, -30), (-30, -30), (30, 30)]
 
-    for s in systemList:
+    systemOffsets = [
+        (0, 0),
+        (-30, 30),
+        (30, -30),
+        (-30, -30),
+        (30, 30),
+    ]
+
+    minX = p.get("minX", 1)
+    minY = p.get("minY", 1)
+
+    for system in systemList:
         tweakOffset = (0, 0)
         dupCount = 0
-        # handle mutliple star systems at same (x,y)
-        if (s.mapPos in mList):
-            if (s.mapPos in dupList.keys()):
-                dupCount = dupList[s.mapPos] + 1
+
+        # Handle multiple star systems at the same absolute
+        # X/Y coordinate.
+        if system.mapPos in mList:
+            if system.mapPos in dupList:
+                dupCount = (
+                        dupList[system.mapPos] + 1
+                )
             else:
                 dupCount = 1
-            dupList[s.mapPos] = dupCount
-        starOffset = [(0, 0)]
-        # get list of offset for individual stars in multiple system
-        if (s.nStars > 1):
-            starOffset = getStarOffsetList(s.nStars)
-            tweakOffset = getTweakOffset(s.stars)
-        # generate symbol data for each star in system
-        xPos = s.mapPos[0] * 150 + systemOffsets[dupCount][0] + tweakOffset[0]
-        yPos = s.mapPos[1] * 150 + systemOffsets[dupCount][1] + tweakOffset[1]
-        data = '<g transform="translate(%f,%f)">' % (xPos * p2mm, yPos * p2mm)
-        s.drawnPos = (xPos - tweakOffset[0],
-                      yPos - tweakOffset[1])  # keep track of where center of system is drawn for later
 
-        i = 0
-        starList = sorted(s.stars, key=sortSpecTypeForDisplay)
-        for star in starList:
-            data += createSymbol(p, star, starOffset[i], defDict)
-            i += 1
-        if p['printZ']:
+            dupList[system.mapPos] = dupCount
+
+        starOffset = [(0, 0)]
+
+        if system.nStars > 1:
+            starOffset = getStarOffsetList(
+                system.nStars
+            )
+
+            tweakOffset = getTweakOffset(
+                system.stars
+            )
+
+        # Translate absolute map coordinates into coordinates
+        # relative to the current map minimum.
+        localX = (
+                system.mapPos[0]
+                - minX
+                + 1
+        )
+
+        localY = (
+                system.mapPos[1]
+                - minY
+                + 1
+        )
+
+        xPos = (
+                localX * 150
+                + systemOffsets[dupCount][0]
+                + tweakOffset[0]
+        )
+
+        yPos = (
+                localY * 150
+                + systemOffsets[dupCount][1]
+                + tweakOffset[1]
+        )
+
+        data = (
+                '<g transform="translate(%f,%f)">'
+                % (
+                    xPos * p2mm,
+                    yPos * p2mm,
+                )
+        )
+
+        # Keep track of the system centre for jump lines and names.
+        system.drawnPos = (
+            xPos - tweakOffset[0],
+            yPos - tweakOffset[1],
+        )
+
+        stars = sorted(
+            system.stars,
+            key=sortSpecTypeForDisplay,
+        )
+
+        for index, star in enumerate(stars):
+            data += createSymbol(
+                p,
+                star,
+                starOffset[index],
+                defDict,
+            )
+
+        if p["printZ"]:
             height = 30
-            data += '<text x="%f" y="%f" font-size="%d" font-family="Ariel,Helvetica,sans-serif" fill="white">' % (
-                20 * p['scale'] * p2mm, height * p['scale'] * p2mm, height * p2mm)
-            if (s.z > 0):
+
+            data += (
+                    '<text x="%f" y="%f" font-size="%d" '
+                    'font-family="Arial,Helvetica,sans-serif" '
+                    'fill="white">'
+                    % (
+                        20 * p["scale"] * p2mm,
+                        height * p["scale"] * p2mm,
+                        height * p2mm,
+                    )
+            )
+
+            if system.z > 0:
                 data += "+"
-            data += "%d</text>" % s.z
+
+            data += "%d</text>" % system.z
 
         data += "</g>"
         symbolList.append(data)
@@ -689,6 +776,7 @@ def drawConnections(params, file, connectionList):
 
         file.write(data)
 
+
 def writeNames(p, f, sList):
     '''This adds in the names of the star systems.
     Right now it just draws them to the upper left of the
@@ -702,54 +790,179 @@ def writeNames(p, f, sList):
         f.write(data)
 
 
-def createMap(params, defDict, symbolList, connectionList, starList):
-    f = open(params['filename'], 'w')
-    # create header
-    w = (params['maxX'] + 1) * 150 * p2mm
-    h = (params['maxY'] + 1) * 150 * p2mm
-    writeMapHeader(f, w, h)
-    # add definitions
-    writeDefs(f, defDict)
-    # add background - Note: we should make the svg canvas black instead
-    f.write('<g id="background" inkscape:groupmode="layer" inkscape:label="Background">\n')
-    f.write(' <rect height="%u" width="%u" y="0" x="0" fill="#000"/>\n' % (h, w))
-    f.write('</g>\n')
-    # add grid
-    f.write('<g id="grid" inkscape:groupmode="layer" inkscape:label="Grid">\n')
-    xMin = 75
-    yMin = 75
-    xMax = params['maxX'] * 150 + 75
-    yMax = params['maxY'] * 150 + 75
-    for i in range(params['maxX'] + 1):
-        x = i * 150 + 75
-        code = '<line x1="%f" y1="%f" x2="%f" y2="%f" style="stroke:rgb(100,100,100); stroke-width:%f" />' % (x * p2mm,
-                                                                                                              yMin * p2mm,
-                                                                                                              x * p2mm,
-                                                                                                              yMax * p2mm,
-                                                                                                              3 * p2mm)
-        f.write(code)
-    for i in range(params['maxY'] + 1):
-        y = i * 150 + 75
-        code = '<line x1="%f" y1="%f" x2="%f" y2="%f" style="stroke:rgb(100,100,100); stroke-width:%f" />' % (
-            xMin * p2mm, y * p2mm, xMax * p2mm, y * p2mm, 3 * p2mm)
-        f.write(code)
-    f.write('</g>\n')
+def createMap(
+        params,
+        defDict,
+        symbolList,
+        connectionList,
+        starList,
+):
+    minX = params.get("minX", 1)
+    minY = params.get("minY", 1)
 
-    # draw connections and label
-    f.write('<g id="jumps" inkscape:groupmode="layer" inkscape:label="Jumps">\n')
-    drawConnections(params, f, connectionList)
-    f.write('</g>\n')
-    # add star symbols (this comes second so they will be on top)
-    f.write('<g id="stars" inkscape:groupmode="layer" inkscape:label="Stars">\n')
-    writeSymbols(f, symbolList)
-    f.write('</g>\n')
-    # add star names
-    f.write('<g id="names" inkscape:groupmode="layer" inkscape:label="Names">\n')
-    writeNames(params, f, starList)
-    f.write('</g>\n')
-    # close off file
-    f.write("</svg>")
-    f.close()
+    mapWidth = (
+            params["maxX"]
+            - minX
+            + 1
+    )
+
+    mapHeight = (
+            params["maxY"]
+            - minY
+            + 1
+    )
+
+    width = (
+            (mapWidth + 1)
+            * 150
+            * p2mm
+    )
+
+    height = (
+            (mapHeight + 1)
+            * 150
+            * p2mm
+    )
+
+    with open(
+            params["filename"],
+            "w",
+            encoding="utf-8",
+    ) as file:
+        writeMapHeader(
+            file,
+            width,
+            height,
+        )
+
+        writeDefs(
+            file,
+            defDict,
+        )
+
+        file.write(
+            '<g id="background" '
+            'inkscape:groupmode="layer" '
+            'inkscape:label="Background">\n'
+        )
+
+        file.write(
+            ' <rect '
+            f'height="{height:f}" '
+            f'width="{width:f}" '
+            'y="0" x="0" fill="#000"/>\n'
+        )
+
+        file.write("</g>\n")
+
+        file.write(
+            '<g id="grid" '
+            'inkscape:groupmode="layer" '
+            'inkscape:label="Grid">\n'
+        )
+
+        xMin = 75
+        yMin = 75
+
+        xMax = (
+                mapWidth * 150
+                + 75
+        )
+
+        yMax = (
+                mapHeight * 150
+                + 75
+        )
+
+        for index in range(mapWidth + 1):
+            x = (
+                    index * 150
+                    + 75
+            )
+
+            code = (
+                    '<line '
+                    'x1="%f" y1="%f" '
+                    'x2="%f" y2="%f" '
+                    'style="stroke:rgb(100,100,100); '
+                    'stroke-width:%f" />\n'
+                    % (
+                        x * p2mm,
+                        yMin * p2mm,
+                        x * p2mm,
+                        yMax * p2mm,
+                        3 * p2mm,
+                    )
+            )
+
+            file.write(code)
+
+        for index in range(mapHeight + 1):
+            y = (
+                    index * 150
+                    + 75
+            )
+
+            code = (
+                    '<line '
+                    'x1="%f" y1="%f" '
+                    'x2="%f" y2="%f" '
+                    'style="stroke:rgb(100,100,100); '
+                    'stroke-width:%f" />\n'
+                    % (
+                        xMin * p2mm,
+                        y * p2mm,
+                        xMax * p2mm,
+                        y * p2mm,
+                        3 * p2mm,
+                    )
+            )
+
+            file.write(code)
+
+        file.write("</g>\n")
+
+        file.write(
+            '<g id="jumps" '
+            'inkscape:groupmode="layer" '
+            'inkscape:label="Jumps">\n'
+        )
+
+        drawConnections(
+            params,
+            file,
+            connectionList,
+        )
+
+        file.write("</g>\n")
+
+        file.write(
+            '<g id="stars" '
+            'inkscape:groupmode="layer" '
+            'inkscape:label="Stars">\n'
+        )
+
+        writeSymbols(
+            file,
+            symbolList,
+        )
+
+        file.write("</g>\n")
+
+        file.write(
+            '<g id="names" '
+            'inkscape:groupmode="layer" '
+            'inkscape:label="Names">\n'
+        )
+
+        writeNames(
+            params,
+            file,
+            starList,
+        )
+
+        file.write("</g>\n")
+        file.write("</svg>")
 
 
 if __name__ == '__main__':

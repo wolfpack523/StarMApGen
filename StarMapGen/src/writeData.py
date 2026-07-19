@@ -2,13 +2,29 @@ from JumpLink import JumpLink
 
 
 def writeSystemData(params, systemList):
-    """Write all star systems to the configured DAT file."""
+    """Write the map bounds and all star systems."""
+
+    minX = params.get("minX", 1)
+    minY = params.get("minY", 1)
+    minZ = params.get("minZ", 0)
+
+    maxX = params.get("maxX", minX)
+    maxY = params.get("maxY", minY)
+    maxZ = params.get("maxZ", minZ)
 
     with open(
             params["datafile"],
             "w",
             encoding="utf-8",
     ) as file:
+        file.write(
+            f"Map Minimum: ({minX},{minY},{minZ})\n"
+        )
+
+        file.write(
+            f"Map Maximum: ({maxX},{maxY},{maxZ})\n\n"
+        )
+
         for system in systemList:
             file.write(
                 f"Name: {system.name}\n"
