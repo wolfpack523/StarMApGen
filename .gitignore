@@ -23,3 +23,5 @@
 /StarMapGen/.vs/StarMapGen/v16/.suo
 /.venv/
 /.idea/
+/build/
+/dist/

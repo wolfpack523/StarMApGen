@@ -2,6 +2,7 @@ import re
 
 import wx
 import wx.lib.intctrl
+import wx.lib.scrolledpanel
 from wx.lib.masked import NumCtrl
 
 from loadData import loadData
@@ -186,26 +187,63 @@ class SMGFrame(wx.Frame):
         # Sizer for the entire window
         self.mainSizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        # Left side
+        # Scrollable left side
+        self.inputPanel = wx.lib.scrolledpanel.ScrolledPanel(
+            mainPanel,
+            style=wx.TAB_TRAVERSAL | wx.VSCROLL,
+        )
+
+        # This sizer belongs to the scrolling panel itself.
+        scrollSizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        # All actual input controls are placed in this sizer.
         inputSizer = wx.BoxSizer(wx.VERTICAL)
 
         self.createParameterControls(
-            mainPanel,
+            self.inputPanel,
             inputSizer,
         )
 
         self.createMapBoundsControls(
-            mainPanel,
+            self.inputPanel,
             inputSizer,
         )
 
         self.createSystemEditor(
-            mainPanel,
+            self.inputPanel,
             inputSizer,
         )
 
-        self.mainSizer.Add(
+        # Reserve space on the right so that the scrollbar does not
+        # cover the contents.
+        scrollbarWidth = wx.SystemSettings.GetMetric(
+            wx.SYS_VSCROLL_X
+        )
+
+        if scrollbarWidth <= 0:
+            scrollbarWidth = 20
+
+        scrollSizer.Add(
             inputSizer,
+            1,
+            wx.RIGHT | wx.EXPAND,
+            scrollbarWidth + 5,
+            )
+
+        self.inputPanel.SetSizer(
+            scrollSizer
+        )
+
+        self.inputPanel.SetupScrolling(
+            scroll_x=False,
+            scroll_y=True,
+            rate_y=20,
+        )
+
+        self.updateInputPanelMinimumWidth()
+
+        self.mainSizer.Add(
+            self.inputPanel,
             0,
             wx.ALL | wx.EXPAND,
             5,
@@ -241,9 +279,22 @@ class SMGFrame(wx.Frame):
 
         self.setDefaults()
 
-        self.mainSizer.SetSizeHints(self)
-        mainPanel.SetSizer(self.mainSizer)
+        mainPanel.SetSizer(
+            self.mainSizer
+        )
+
+        # Do not calculate the minimum window size from all controls.
+        # The left side is scrollable now.
+        self.SetMinSize(
+            (900, 520)
+        )
+
+        self.SetSize(
+            (1200, 760)
+        )
+
         mainPanel.Layout()
+        self.inputPanel.FitInside()
 
         self.Bind(
             wx.EVT_SIZE,
@@ -252,162 +303,341 @@ class SMGFrame(wx.Frame):
 
         self.Show()
 
-    def createParameterControls(self, parent, inputSizer):
-        """Create the file and random generation controls."""
+    def createCollapsibleSection(
+            self,
+            parent,
+            targetSizer,
+            label,
+            expanded=False,
+    ):
+        """Create one collapsible section in the input panel."""
+
+        pane = wx.CollapsiblePane(
+            parent,
+            label=label,
+            style=(
+                    wx.CP_DEFAULT_STYLE
+                    | wx.CP_NO_TLW_RESIZE
+            ),
+        )
+
+        pane.Collapse(
+            not expanded
+        )
+
+        pane.Bind(
+            wx.EVT_COLLAPSIBLEPANE_CHANGED,
+            self.onCollapsiblePaneChanged,
+        )
+
+        targetSizer.Add(
+            pane,
+            0,
+            wx.BOTTOM | wx.EXPAND,
+            5,
+            )
+
+        contentPanel = pane.GetPane()
+
+        contentSizer = wx.BoxSizer(
+            wx.VERTICAL
+        )
+
+        contentPanel.SetSizer(
+            contentSizer
+        )
+
+        return (
+            pane,
+            contentPanel,
+            contentSizer,
+        )
+
+
+    def onCollapsiblePaneChanged(self, event):
+        """Recalculate the scrollable area after expanding a section."""
+
+        self.refreshInputPanelLayout()
+        event.Skip()
+
+
+    def updateInputPanelMinimumWidth(self):
+        """Calculate the required width of the scrollable input panel."""
+
+        if not hasattr(self, "inputPanel"):
+            return
+
+        panelSizer = self.inputPanel.GetSizer()
+
+        if panelSizer is None:
+            return
+
+        minimumWidth = (
+            panelSizer.GetMinSize().GetWidth()
+        )
+
+        borderWidth = (
+            self.inputPanel
+            .GetWindowBorderSize()
+            .GetWidth()
+        )
+
+        self.inputPanel.SetMinSize(
+            (
+                minimumWidth
+                + borderWidth
+                + 5,
+                -1,
+            )
+        )
+
+    def refreshInputPanelLayout(self):
+        """Update the input panel layout and its scrollbars."""
+
+        if not hasattr(
+                self,
+                "inputPanel",
+        ):
+            return
+
+        self.inputPanel.Layout()
+        self.inputPanel.FitInside()
+
+        self.updateInputPanelMinimumWidth()
+
+        self.mainSizer.Layout()
+
+
+    def createParameterControls(
+            self,
+            parent,
+            inputSizer,
+    ):
+        """Create collapsible file and random generation sections."""
 
         def addControlRow(
-                containerSizer,
+                sectionParent,
+                sectionSizer,
                 label,
                 control,
-                top=10,
         ):
-            row = wx.BoxSizer(wx.HORIZONTAL)
+            row = wx.BoxSizer(
+                wx.HORIZONTAL
+            )
 
             row.Add(
                 wx.StaticText(
-                    parent,
+                    sectionParent,
                     label=label,
                 ),
                 0,
-                wx.TOP,
-                top,
-            )
+                wx.ALIGN_CENTER_VERTICAL
+                | wx.RIGHT,
+                8,
+                )
 
             row.Add(
                 control,
+                1,
+                wx.EXPAND,
+            )
+
+            sectionSizer.Add(
+                row,
                 0,
                 wx.ALL | wx.EXPAND,
                 5,
-            )
+                )
 
-            containerSizer.Add(
-                row,
-                0,
-                wx.ALIGN_RIGHT,
-            )
+        # ------------------------------------------------------------
+        # Map files and display
+        # ------------------------------------------------------------
 
-        # General map and file settings
-        dataSizer = wx.StaticBoxSizer(
-            wx.VERTICAL,
+        (
+            self.mapFilesPane,
+            filesParent,
+            filesSizer,
+        ) = self.createCollapsibleSection(
             parent,
-            label="Map Files and Display",
+            inputSizer,
+            "Map Files and Display",
+            expanded=True,
         )
 
         self.textScale = NumCtrl(
-            parent,
+            filesParent,
             min=0.25,
             fractionWidth=2,
         )
 
         addControlRow(
-            dataSizer,
+            filesParent,
+            filesSizer,
             "Text Scale:",
             self.textScale,
         )
 
-        self.outMapName = wx.TextCtrl(parent)
+        self.outMapName = wx.TextCtrl(
+            filesParent
+        )
 
         addControlRow(
-            dataSizer,
+            filesParent,
+            filesSizer,
             "Output Map Filename:",
             self.outMapName,
         )
 
-        self.dataName = wx.TextCtrl(parent)
+        self.dataName = wx.TextCtrl(
+            filesParent
+        )
 
         addControlRow(
-            dataSizer,
+            filesParent,
+            filesSizer,
             "Data Filename:",
             self.dataName,
         )
 
-        printZRow = wx.BoxSizer(wx.HORIZONTAL)
+        printZRow = wx.BoxSizer(
+            wx.HORIZONTAL
+        )
 
         printZRow.Add(
             wx.StaticText(
-                parent,
+                filesParent,
                 label="Print Z coordinate:",
             ),
-            0,
-            wx.TOP,
-            5,
+            1,
+            wx.ALIGN_CENTER_VERTICAL,
         )
 
-        self.printZ = wx.CheckBox(parent)
+        self.printZ = wx.CheckBox(
+            filesParent
+        )
 
         printZRow.Add(
             self.printZ,
             0,
-            wx.ALL,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        filesSizer.Add(
+            printZRow,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+            )
+
+        fileButtonSizer = wx.BoxSizer(
+            wx.HORIZONTAL
+        )
+
+        loadButton = wx.Button(
+            filesParent,
+            label="Load Map",
+        )
+
+        loadButton.Bind(
+            wx.EVT_BUTTON,
+            self.loadMap,
+        )
+
+        fileButtonSizer.Add(
+            loadButton,
+            0,
+            wx.RIGHT,
             5,
         )
 
-        dataSizer.Add(
-            printZRow,
-            0,
-            wx.ALIGN_RIGHT,
+        resetButton = wx.Button(
+            filesParent,
+            label="Reset Values",
         )
 
-        inputSizer.Add(
-            dataSizer,
-            0,
-            wx.EXPAND,
+        resetButton.Bind(
+            wx.EVT_BUTTON,
+            self.resetParameters,
         )
 
-        # Settings used only when generating a new random map.
-        randomSizer = wx.StaticBoxSizer(
-            wx.VERTICAL,
+        fileButtonSizer.Add(
+            resetButton,
+            0,
+        )
+
+        filesSizer.Add(
+            fileButtonSizer,
+            0,
+            wx.ALL | wx.ALIGN_RIGHT,
+            5,
+            )
+
+        # ------------------------------------------------------------
+        # Random generation
+        # ------------------------------------------------------------
+
+        (
+            self.randomGenerationPane,
+            randomParent,
+            randomSizer,
+        ) = self.createCollapsibleSection(
             parent,
-            label="Random Generation",
+            inputSizer,
+            "Random Generation",
+            expanded=False,
         )
 
         self.xSize = wx.lib.intctrl.IntCtrl(
-            parent,
+            randomParent,
             min=1,
         )
 
         addControlRow(
+            randomParent,
             randomSizer,
             "Map Width (x):",
             self.xSize,
         )
 
         self.ySize = wx.lib.intctrl.IntCtrl(
-            parent,
+            randomParent,
             min=1,
         )
 
         addControlRow(
+            randomParent,
             randomSizer,
             "Map Height (y):",
             self.ySize,
         )
 
         self.zSize = wx.lib.intctrl.IntCtrl(
-            parent,
+            randomParent,
             min=1,
         )
 
         addControlRow(
+            randomParent,
             randomSizer,
             "Map Thickness (z):",
             self.zSize,
         )
 
         self.stellarDensity = NumCtrl(
-            parent,
+            randomParent,
             min=0,
             fractionWidth=4,
         )
 
         addControlRow(
+            randomParent,
             randomSizer,
             "Stellar Density:",
             self.stellarDensity,
         )
 
         generateButton = wx.Button(
-            parent,
+            randomParent,
             label="Generate Random Map",
         )
 
@@ -421,124 +651,91 @@ class SMGFrame(wx.Frame):
             0,
             wx.ALL | wx.ALIGN_RIGHT,
             5,
-        )
+            )
 
-        inputSizer.Add(
-            randomSizer,
-            0,
-            wx.TOP | wx.EXPAND,
-            5,
-        )
-
-        buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        loadButton = wx.Button(
-            parent,
-            label="Load Map",
-        )
-
-        loadButton.Bind(
-            wx.EVT_BUTTON,
-            self.loadMap,
-        )
-
-        buttonSizer.Add(
-            loadButton,
-            0,
-            wx.ALL,
-            5,
-        )
-
-        resetButton = wx.Button(
-            parent,
-            label="Reset Values",
-        )
-
-        resetButton.Bind(
-            wx.EVT_BUTTON,
-            self.resetParameters,
-        )
-
-        buttonSizer.Add(
-            resetButton,
-            0,
-            wx.ALL,
-            5,
-        )
-
-        inputSizer.Add(
-            buttonSizer,
-            0,
-            wx.ALL | wx.CENTER,
-            5,
-        )
 
     def createMapBoundsControls(
             self,
             parent,
             inputSizer,
     ):
-        """Create controls for extending the loaded map."""
-
-        boundsSizer = wx.StaticBoxSizer(
-            wx.VERTICAL,
+        """Create collapsible controls for extending the map."""
+    
+        (
+            self.mapBoundsPane,
+            boundsParent,
+            boundsSizer,
+        ) = self.createCollapsibleSection(
             parent,
-            label="Map Bounds",
+            inputSizer,
+            "Map Bounds",
+            expanded=False,
         )
-
+    
         self.mapBoundsLabel = wx.StaticText(
-            parent,
+            boundsParent,
             label="No map loaded.",
         )
-
-        self.mapBoundsLabel.Wrap(330)
-
+    
+        self.mapBoundsLabel.Wrap(
+            330
+        )
+    
         boundsSizer.Add(
             self.mapBoundsLabel,
             0,
             wx.ALL | wx.EXPAND,
             5,
+            )
+    
+        amountSizer = wx.BoxSizer(
+            wx.HORIZONTAL
         )
-
-        amountSizer = wx.BoxSizer(wx.HORIZONTAL)
-
+    
         amountSizer.Add(
             wx.StaticText(
-                parent,
+                boundsParent,
                 label="Extend by:",
             ),
-            0,
-            wx.ALIGN_CENTER_VERTICAL | wx.RIGHT,
+            1,
+            wx.ALIGN_CENTER_VERTICAL
+            | wx.RIGHT,
             5,
-        )
-
+            )
+    
         self.extendAmount = wx.lib.intctrl.IntCtrl(
-            parent,
+            boundsParent,
             min=1,
         )
-
-        self.extendAmount.SetValue(5)
+    
+        self.extendAmount.SetValue(
+            5
+        )
+    
         self.extendAmount.Disable()
-
+    
         amountSizer.Add(
             self.extendAmount,
             0,
         )
-
+    
         boundsSizer.Add(
             amountSizer,
             0,
-            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.ALIGN_RIGHT,
+            wx.LEFT
+            | wx.RIGHT
+            | wx.BOTTOM
+            | wx.EXPAND,
             5,
-        )
-
+            )
+    
         buttonGrid = wx.GridSizer(
             rows=2,
             cols=3,
             vgap=5,
             hgap=5,
         )
-
+    
         buttonDefinitions = [
             ("X -", "x-"),
             ("Y -", "y-"),
@@ -547,43 +744,43 @@ class SMGFrame(wx.Frame):
             ("Y +", "y+"),
             ("Z +", "z+"),
         ]
-
+    
         self.mapBoundsButtons = []
-
+    
         for label, direction in buttonDefinitions:
             button = wx.Button(
-                parent,
+                boundsParent,
                 label=label,
             )
-
+    
             button.Bind(
                 wx.EVT_BUTTON,
                 lambda event, value=direction:
                 self.extendMap(value),
             )
-
+    
             button.Disable()
-            self.mapBoundsButtons.append(button)
-
+    
+            self.mapBoundsButtons.append(
+                button
+            )
+    
             buttonGrid.Add(
                 button,
                 1,
                 wx.EXPAND,
             )
-
+    
         boundsSizer.Add(
             buttonGrid,
             0,
-            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
+            wx.LEFT
+            | wx.RIGHT
+            | wx.BOTTOM
+            | wx.EXPAND,
             5,
-        )
+            )
 
-        inputSizer.Add(
-            boundsSizer,
-            0,
-            wx.TOP | wx.EXPAND,
-            5,
-        )
 
     def createSystemEditor(self, parent, inputSizer):
         """Create the star system and jump link editor."""
@@ -996,7 +1193,7 @@ class SMGFrame(wx.Frame):
 
         inputSizer.Add(
             editorSizer,
-            1,
+            0,
             wx.TOP | wx.EXPAND,
             5,
         )
@@ -1933,6 +2130,7 @@ G2, M4, WD
             for button in self.mapBoundsButtons:
                 button.Disable()
 
+            self.refreshInputPanelLayout()
             return
 
         width = (
@@ -1970,7 +2168,7 @@ G2, M4, WD
         for button in self.mapBoundsButtons:
             button.Enable()
 
-        self.mainSizer.Layout()
+        self.refreshInputPanelLayout()
 
     def extendMap(self, direction):
         """Extend the current map in one direction."""
