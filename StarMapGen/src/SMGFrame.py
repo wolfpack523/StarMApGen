@@ -36,6 +36,10 @@ JUMP_STATUS_OPTIONS = [
         JumpLink.STATUS_BLOCKED,
         "Blocked",
     ),
+    (
+        JumpLink.STATUS_LOST,
+        "Lost",
+    ),
 ]
 
 JUMP_STATUS_LABELS = dict(

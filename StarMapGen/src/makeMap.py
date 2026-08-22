@@ -26,6 +26,11 @@ JUMP_STATUS_STYLES = {
         "strokeWidth": 6,
         "dash": (4, 7),
     },
+    JumpLink.STATUS_LOST: {
+        "color": "#0033cc",
+        "strokeWidth": 6,
+        "dash": (4, 7),
+    },
 }
 
 
