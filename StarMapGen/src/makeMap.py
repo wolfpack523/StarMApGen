@@ -528,15 +528,22 @@ def getStarOffsetList(n):
 
 
 def writeMapHeader(f, w, h):
-    f.write(r'<?xml version="1.0" encoding="UTF-8" standalone="no"?>')
-    f.write("\n")
+    """Write a clean, standards-compliant SVG header."""
+
     f.write(
-        r'<svg xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:cc="http://creativecommons.org/ns#" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" viewBox="0 0 ')
-    params = "%u %u" % (w, h)
-    f.write(params)
-    f.write('" width="%d" height="%d"' % (w / p2mm, h / p2mm))
-    f.write(r' xmlns:dc="http://purl.org/dc/elements/1.1/">')
-    f.write("\n")
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+    )
+
+    f.write(
+        '<svg '
+        'xmlns="http://www.w3.org/2000/svg" '
+        'version="1.1" '
+        f'viewBox="0 0 {w:.6f} {h:.6f}" '
+        f'width="{w:.6f}" '
+        f'height="{h:.6f}" '
+        'preserveAspectRatio="xMidYMid meet">'
+        '\n'
+    )
 
 
 def findConnections(systemList, jumpList):
@@ -790,7 +797,7 @@ def writeNames(p, f, sList):
     for s in sList:
         data = '<g><text x="%f" y="%f" font-size="%f"' % ((s.drawnPos[0] + offset) * p2mm,
                                                           (s.drawnPos[1] - offset) * p2mm, 50 * p['scale'] * p2mm)
-        data += ' font-family="Copperplate Gothic Bold,Times,serif" fill="white">'
+        data += ' font-family="Arial, Helvetica, sans-serif" fill="white">'
         data += "%s</text></g>\n" % s.name
         f.write(data)
 

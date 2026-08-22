@@ -108,28 +108,186 @@ class SMGMapPanel(wx.Panel):
             height: 100%;
             margin: 0;
             padding: 0;
-            overflow: hidden;
+            overflow: auto;
             background: #000000;
         }}
 
-        body {{
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        #viewport {{
+            position: relative;
+            width: max-content;
+            height: max-content;
+            min-width: 100%;
+            min-height: 100%;
+            transform-origin: 0 0;
         }}
 
-        svg {{
+        #map {{
             display: block;
-            width: 100%;
-            height: 100%;
-            max-width: 100%;
-            max-height: 100%;
+            transform-origin: 0 0;
+        }}
+
+        #map svg {{
+            display: block;
+            max-width: none;
+            max-height: none;
+        }}
+
+        #zoomIndicator {{
+            position: fixed;
+            right: 12px;
+            bottom: 12px;
+
+            padding: 5px 9px;
+
+            color: #ffffff;
+            background: rgba(0, 0, 0, 0.7);
+
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 4px;
+
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+
+            pointer-events: none;
+            user-select: none;
         }}
     </style>
 </head>
 
 <body>
-{svgContent}
+
+<div id="viewport">
+    <div id="map">
+        {svgContent}
+    </div>
+</div>
+
+<div id="zoomIndicator">
+    100 %
+</div>
+
+<script>
+    const map = document.getElementById("map");
+    const viewport = document.getElementById("viewport");
+    const indicator = document.getElementById("zoomIndicator");
+
+    let zoom = 1.0;
+
+    const minZoom = 0.1;
+    const maxZoom = 8.0;
+    const zoomStep = 1.15;
+
+    function clamp(value, minimum, maximum) {{
+        return Math.min(
+            maximum,
+            Math.max(
+                minimum,
+                value
+            )
+        );
+    }}
+
+    function updateZoom() {{
+        map.style.transform =
+            `scale(${{zoom}})`;
+
+        const svg = map.querySelector("svg");
+
+        if (svg) {{
+            const width =
+                svg.viewBox.baseVal.width
+                || svg.width.baseVal.value;
+
+            const height =
+                svg.viewBox.baseVal.height
+                || svg.height.baseVal.value;
+
+            viewport.style.width =
+                `${{width * zoom}}px`;
+
+            viewport.style.height =
+                `${{height * zoom}}px`;
+        }}
+
+        indicator.textContent =
+            `${{Math.round(zoom * 100)}} %`;
+    }}
+
+    function setZoom(newZoom) {{
+        zoom = clamp(
+            newZoom,
+            minZoom,
+            maxZoom
+        );
+
+        updateZoom();
+    }}
+
+    document.addEventListener(
+        "wheel",
+        event => {{
+            if (!event.ctrlKey) {{
+                return;
+            }}
+
+            event.preventDefault();
+
+            if (event.deltaY < 0) {{
+                setZoom(
+                    zoom * zoomStep
+                );
+            }}
+            else {{
+                setZoom(
+                    zoom / zoomStep
+                );
+            }}
+        }},
+        {{
+            passive: false
+        }}
+    );
+
+    document.addEventListener(
+        "keydown",
+        event => {{
+            if (
+                event.key === "+"
+                || event.key === "="
+            ) {{
+                event.preventDefault();
+
+                setZoom(
+                    zoom * zoomStep
+                );
+
+                return;
+            }}
+
+            if (event.key === "-") {{
+                event.preventDefault();
+
+                setZoom(
+                    zoom / zoomStep
+                );
+
+                return;
+            }}
+
+            if (event.key === "0") {{
+                event.preventDefault();
+
+                setZoom(1.0);
+            }}
+        }}
+    );
+
+    document.body.tabIndex = 0;
+    document.body.focus();
+
+    updateZoom();
+</script>
+
 </body>
 </html>
 """
@@ -149,7 +307,6 @@ class SMGMapPanel(wx.Panel):
     def prepareSvg(self, svgContent):
         """Prepare a standalone SVG for embedding in HTML."""
 
-        # XML declarations are not valid inside an HTML body.
         svgContent = re.sub(
             r"^\s*<\?xml[^>]*\?>",
             "",
@@ -158,24 +315,9 @@ class SMGMapPanel(wx.Panel):
             flags=re.IGNORECASE,
         )
 
-        # Remove an optional DOCTYPE declaration.
         svgContent = re.sub(
             r"<!DOCTYPE[^>]*(?:\[[\s\S]*?\]\s*)?>",
             "",
-            svgContent,
-            count=1,
-            flags=re.IGNORECASE,
-        )
-
-        # Ensure that the complete SVG is scaled into the panel.
-        # The generated SVG already contains a viewBox.
-        svgContent = re.sub(
-            r"<svg\b",
-            (
-                '<svg '
-                'preserveAspectRatio="xMidYMid meet" '
-                'style="width:100%;height:100%;display:block;"'
-            ),
             svgContent,
             count=1,
             flags=re.IGNORECASE,
