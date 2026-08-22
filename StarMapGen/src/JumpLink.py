@@ -3,12 +3,14 @@ class JumpLink:
     STATUS_CAUTION = "caution"
     STATUS_DANGEROUS = "dangerous"
     STATUS_BLOCKED = "blocked"
+    STATUS_LOST = "lost"
 
     VALID_STATUSES = {
         STATUS_NORMAL,
         STATUS_CAUTION,
         STATUS_DANGEROUS,
         STATUS_BLOCKED,
+        STATUS_LOST
     }
 
     def __init__(
