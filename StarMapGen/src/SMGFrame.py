@@ -19,6 +19,7 @@ from SMGMapPanel import SMGMapPanel
 from StarSystem import StarSystem
 from writeData import writeConnectionData, writeSystemData
 from JumpLink import JumpLink
+from Nebula import Nebula
 
 JUMP_STATUS_OPTIONS = [
     (
@@ -179,6 +180,7 @@ class SMGFrame(wx.Frame):
         self.params = {}
         self.starList = []
         self.jumpList = []
+        self.nebulaList = []
 
         # Editor state
         self.selectedSystemIndex = wx.NOT_FOUND
