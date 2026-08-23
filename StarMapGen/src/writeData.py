@@ -67,7 +67,7 @@ def writeConnectionData(params, jumpList):
             )
 
         file.write("\n")
-        
+
 def writeNebulaData(params, nebulaList):
     """Append all nebulae to the DAT file."""
 
@@ -93,11 +93,11 @@ def writeNebulaData(params, nebulaList):
                 f"Opacity: {nebula.opacity:.2f}\n"
             )
 
-            cells = ", ".join(
+            points = ", ".join(
                 f"({x},{y})"
-                for x, y in nebula.cells
+                for x, y in nebula.points
             )
 
             file.write(
-                f"Cells: {cells}\n\n"
+                f"Points: {points}\n\n"
             )

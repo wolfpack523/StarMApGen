@@ -1,5 +1,5 @@
 class Nebula:
-    """A nebula region made up of map grid cells."""
+    """A nebula defined by an ordered polygon."""
 
     STYLE_CLOUD = "cloud"
     STYLE_OUTLINE = "outline"
@@ -14,13 +14,13 @@ class Nebula:
     def __init__(
             self,
             name="Nebula",
-            cells=None,
+            points=None,
             style=STYLE_CLOUD,
             color="#7a2f8f",
             opacity=0.35,
     ):
         self.name = name
-        self.cells = list(cells or [])
+        self.points = list(points or [])
 
         self.style = (
             style
@@ -31,43 +31,32 @@ class Nebula:
         self.color = color
         self.opacity = float(opacity)
 
-    def addCell(self, x, y):
-        """Add one map cell."""
+    def addPoint(self, x, y):
+        """Add one boundary point."""
 
-        cell = (
+        point = (
             int(x),
             int(y),
         )
 
-        if cell not in self.cells:
-            self.cells.append(cell)
+        if point not in self.points:
+            self.points.append(point)
 
-    def removeCell(self, x, y):
-        """Remove one map cell."""
+    def removePoint(self, x, y):
+        """Remove one boundary point."""
 
-        cell = (
+        point = (
             int(x),
             int(y),
         )
 
-        if cell in self.cells:
-            self.cells.remove(cell)
+        if point in self.points:
+            self.points.remove(point)
 
-    def containsCell(self, x, y):
-        """Return whether the nebula contains a cell."""
+    def containsPoint(self, x, y):
+        """Return whether the nebula contains a boundary point."""
 
         return (
             int(x),
             int(y),
-        ) in self.cells
-
-    def normalize(self):
-        """Remove duplicates and sort cells by Y and X."""
-
-        self.cells = sorted(
-            set(self.cells),
-            key=lambda cell: (
-                cell[1],
-                cell[0],
-            ),
-        )
+        ) in self.points

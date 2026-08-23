@@ -36,11 +36,11 @@ NEBULA_OPACITY_PATTERN = re.compile(
     r"^Opacity:\s*([0-9]*\.?[0-9]+)$"
 )
 
-NEBULA_CELLS_PATTERN = re.compile(
-    r"^Cells:\s*(.*)$"
+NEBULA_POINTS_PATTERN = re.compile(
+    r"^Points:\s*(.*)$"
 )
 
-NEBULA_CELL_PATTERN = re.compile(
+NEBULA_POINT_PATTERN = re.compile(
     r"\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)"
 )
 
@@ -135,7 +135,7 @@ def loadData(
                 )
 
                 continue
-                
+
             linkMatch = LINK_PATTERN.match(line)
 
             if linkMatch:
@@ -375,6 +375,7 @@ def readSystem(file, params, name):
 
     return system
 
+
 def readNebula(
         file,
         name,
@@ -409,7 +410,6 @@ def readNebula(
             f'for nebula "{name}".'
         )
 
-
     colorLine = readRequiredLine(
         file,
         f'color for nebula "{name}"',
@@ -430,7 +430,6 @@ def readNebula(
         .group(1)
         .lower()
     )
-
 
     opacityLine = readRequiredLine(
         file,
@@ -457,49 +456,46 @@ def readNebula(
             "must be between 0 and 1."
         )
 
-
-    cellsLine = readRequiredLine(
+    pointsLine = readRequiredLine(
         file,
-        f'cells for nebula "{name}"',
+        f'points for nebula "{name}"',
     )
 
-    cellsMatch = NEBULA_CELLS_PATTERN.match(
-        cellsLine.strip()
+    pointsMatch = NEBULA_POINTS_PATTERN.match(
+        pointsLine.strip()
     )
 
-    if cellsMatch is None:
+    if pointsMatch is None:
         raise ValueError(
-            f'Invalid cells for nebula "{name}": '
-            f'"{cellsLine.strip()}"'
+            f'Invalid points for nebula "{name}": '
+            f'"{pointsLine.strip()}"'
         )
 
-    cellsText = cellsMatch.group(1)
+    pointsText = pointsMatch.group(1)
 
-    cells = [
+    points = [
         (
             int(match.group(1)),
             int(match.group(2)),
         )
-        for match in NEBULA_CELL_PATTERN.finditer(
-            cellsText
+        for match in NEBULA_POINT_PATTERN.finditer(
+            pointsText
         )
     ]
 
-    if not cells:
+    if len(points) < 3:
         raise ValueError(
             f'Nebula "{name}" must contain '
-            "at least one cell."
+            "at least three boundary points."
         )
 
     nebula = Nebula(
         name=name,
-        cells=cells,
+        points=points,
         style=style,
         color=color,
         opacity=opacity,
     )
-
-    nebula.normalize()
 
     return nebula
 

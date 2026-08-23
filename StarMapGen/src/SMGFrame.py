@@ -248,7 +248,7 @@ class SMGFrame(wx.Frame):
             1,
             wx.RIGHT | wx.EXPAND,
             scrollbarWidth + 5,
-            )
+        )
 
         self.inputPanel.SetSizer(
             scrollSizer
@@ -355,7 +355,7 @@ class SMGFrame(wx.Frame):
             0,
             wx.BOTTOM | wx.EXPAND,
             5,
-            )
+        )
 
         contentPanel = pane.GetPane()
 
@@ -373,13 +373,11 @@ class SMGFrame(wx.Frame):
             contentSizer,
         )
 
-
     def onCollapsiblePaneChanged(self, event):
         """Recalculate the scrollable area after expanding a section."""
 
         self.refreshInputPanelLayout()
         event.Skip()
-
 
     def updateInputPanelMinimumWidth(self):
         """Calculate the required width of the scrollable input panel."""
@@ -427,7 +425,6 @@ class SMGFrame(wx.Frame):
 
         self.mainSizer.Layout()
 
-
     def createParameterControls(
             self,
             parent,
@@ -454,7 +451,7 @@ class SMGFrame(wx.Frame):
                 wx.ALIGN_CENTER_VERTICAL
                 | wx.RIGHT,
                 8,
-                )
+            )
 
             row.Add(
                 control,
@@ -467,7 +464,7 @@ class SMGFrame(wx.Frame):
                 0,
                 wx.ALL | wx.EXPAND,
                 5,
-                )
+            )
 
         # ------------------------------------------------------------
         # Map files and display
@@ -547,7 +544,7 @@ class SMGFrame(wx.Frame):
             0,
             wx.ALL | wx.EXPAND,
             5,
-            )
+        )
 
         fileButtonSizer = wx.BoxSizer(
             wx.HORIZONTAL
@@ -590,7 +587,7 @@ class SMGFrame(wx.Frame):
             0,
             wx.ALL | wx.ALIGN_RIGHT,
             5,
-            )
+        )
 
         # ------------------------------------------------------------
         # Random generation
@@ -671,8 +668,7 @@ class SMGFrame(wx.Frame):
             0,
             wx.ALL | wx.ALIGN_RIGHT,
             5,
-            )
-
+        )
 
     def createMapBoundsControls(
             self,
@@ -680,7 +676,7 @@ class SMGFrame(wx.Frame):
             inputSizer,
     ):
         """Create collapsible controls for extending the map."""
-    
+
         (
             self.mapBoundsPane,
             boundsParent,
@@ -691,27 +687,27 @@ class SMGFrame(wx.Frame):
             "Map Bounds",
             expanded=False,
         )
-    
+
         self.mapBoundsLabel = wx.StaticText(
             boundsParent,
             label="No map loaded.",
         )
-    
+
         self.mapBoundsLabel.Wrap(
             330
         )
-    
+
         boundsSizer.Add(
             self.mapBoundsLabel,
             0,
             wx.ALL | wx.EXPAND,
             5,
-            )
-    
+        )
+
         amountSizer = wx.BoxSizer(
             wx.HORIZONTAL
         )
-    
+
         amountSizer.Add(
             wx.StaticText(
                 boundsParent,
@@ -721,24 +717,24 @@ class SMGFrame(wx.Frame):
             wx.ALIGN_CENTER_VERTICAL
             | wx.RIGHT,
             5,
-            )
-    
+        )
+
         self.extendAmount = wx.lib.intctrl.IntCtrl(
             boundsParent,
             min=1,
         )
-    
+
         self.extendAmount.SetValue(
             5
         )
-    
+
         self.extendAmount.Disable()
-    
+
         amountSizer.Add(
             self.extendAmount,
             0,
         )
-    
+
         boundsSizer.Add(
             amountSizer,
             0,
@@ -747,15 +743,15 @@ class SMGFrame(wx.Frame):
             | wx.BOTTOM
             | wx.EXPAND,
             5,
-            )
-    
+        )
+
         buttonGrid = wx.GridSizer(
             rows=2,
             cols=3,
             vgap=5,
             hgap=5,
         )
-    
+
         buttonDefinitions = [
             ("X -", "x-"),
             ("Y -", "y-"),
@@ -764,33 +760,33 @@ class SMGFrame(wx.Frame):
             ("Y +", "y+"),
             ("Z +", "z+"),
         ]
-    
+
         self.mapBoundsButtons = []
-    
+
         for label, direction in buttonDefinitions:
             button = wx.Button(
                 boundsParent,
                 label=label,
             )
-    
+
             button.Bind(
                 wx.EVT_BUTTON,
                 lambda event, value=direction:
                 self.extendMap(value),
             )
-    
+
             button.Disable()
-    
+
             self.mapBoundsButtons.append(
                 button
             )
-    
+
             buttonGrid.Add(
                 button,
                 1,
                 wx.EXPAND,
             )
-    
+
         boundsSizer.Add(
             buttonGrid,
             0,
@@ -799,8 +795,7 @@ class SMGFrame(wx.Frame):
             | wx.BOTTOM
             | wx.EXPAND,
             5,
-            )
-
+        )
 
     def createSystemEditor(self, parent, inputSizer):
         """Create the star system and jump link editor."""
@@ -1271,7 +1266,7 @@ class SMGFrame(wx.Frame):
             0,
             wx.ALL | wx.EXPAND,
             5,
-            )
+        )
 
         detailsSizer = wx.FlexGridSizer(
             cols=2,
@@ -1397,51 +1392,51 @@ class SMGFrame(wx.Frame):
             0,
             wx.ALL | wx.EXPAND,
             5,
-            )
+        )
 
         # ------------------------------------------------------------
-        # Cells
+        # Points
         # ------------------------------------------------------------
 
         nebulaSizer.Add(
             wx.StaticText(
                 nebulaParent,
-                label="Cells:",
+                label="Points:",
             ),
             0,
             wx.LEFT | wx.RIGHT | wx.TOP,
             5,
-            )
+        )
 
-        self.nebulaCells = wx.TextCtrl(
+        self.nebulaPoints = wx.TextCtrl(
             nebulaParent,
             size=(-1, 100),
             style=wx.TE_MULTILINE,
         )
 
         nebulaSizer.Add(
-            self.nebulaCells,
+            self.nebulaPoints,
             0,
             wx.LEFT | wx.RIGHT | wx.EXPAND,
             5,
-            )
+        )
 
-        cellHint = wx.StaticText(
+        pointHint = wx.StaticText(
             nebulaParent,
             label=(
-                "Enter one map cell per line as x,y. "
-                "Example: 4,5"
+                "Enter one boundary point per line as x,y. "
+                "Points are connected in the entered order."
             ),
         )
 
-        cellHint.Wrap(330)
+        pointHint.Wrap(330)
 
         nebulaSizer.Add(
-            cellHint,
+            pointHint,
             0,
             wx.ALL | wx.EXPAND,
             5,
-            )
+        )
 
         # ------------------------------------------------------------
         # Buttons
@@ -1530,10 +1525,9 @@ class SMGFrame(wx.Frame):
             0,
             wx.ALL | wx.ALIGN_RIGHT,
             5,
-            )
+        )
 
         self.clearNebulaDetails()
-
 
     def refreshNebulaEditor(
             self,
@@ -1549,7 +1543,7 @@ class SMGFrame(wx.Frame):
             for nebula in self.nebulaList:
                 self.nebulaListControl.Append(
                     f"{nebula.name} "
-                    f"({len(nebula.cells)} cells)"
+                    f"({len(nebula.points)} points)"
                 )
 
         finally:
@@ -1565,7 +1559,7 @@ class SMGFrame(wx.Frame):
                 min(
                     selectedIndex,
                     len(self.nebulaList) - 1,
-                    ),
+                ),
             )
 
             self.nebulaListControl.SetSelection(
@@ -1628,10 +1622,10 @@ class SMGFrame(wx.Frame):
             nebula.opacity
         )
 
-        self.nebulaCells.SetValue(
+        self.nebulaPoints.SetValue(
             "\n".join(
                 f"{x},{y}"
-                for x, y in nebula.cells
+                for x, y in nebula.points
             )
         )
 
@@ -1650,7 +1644,7 @@ class SMGFrame(wx.Frame):
                 "Generate or load a map before adding a nebula.",
                 "No map available",
                 wx.OK | wx.ICON_INFORMATION,
-                )
+            )
             return
 
         self.nebulaCreationReturnIndex = (
@@ -1695,7 +1689,7 @@ class SMGFrame(wx.Frame):
             0.35
         )
 
-        self.nebulaCells.SetValue("")
+        self.nebulaPoints.SetValue("")
 
         self.nebulaName.SetFocus()
         self.nebulaName.SelectAll()
@@ -1755,7 +1749,7 @@ class SMGFrame(wx.Frame):
             self.clearNebulaDetails()
 
         self.SetStatusText(
-            "Nebula creation cancelled."
+            "Nebula creation canpointed."
         )
 
     def leaveNebulaCreateMode(self):
@@ -1815,8 +1809,8 @@ class SMGFrame(wx.Frame):
                 "Opacity must be between 0 and 1."
             )
 
-        cells = self.parseNebulaCells(
-            self.nebulaCells.GetValue()
+        points = self.parseNebulaPoints(
+            self.nebulaPoints.GetValue()
         )
 
         return {
@@ -1824,7 +1818,7 @@ class SMGFrame(wx.Frame):
             "style": style,
             "color": color,
             "opacity": opacity,
-            "cells": cells,
+            "points": points,
         }
 
     def validateNebulaName(
@@ -1860,7 +1854,6 @@ class SMGFrame(wx.Frame):
 
         return name
 
-
     def parseNebulaColor(self, value):
         """Validate an SVG hexadecimal colour."""
 
@@ -1877,10 +1870,10 @@ class SMGFrame(wx.Frame):
 
         return color.lower()
 
-    def parseNebulaCells(self, value):
-        """Parse the cell list from the nebula editor."""
+    def parseNebulaPoints(self, value):
+        """Parse the ordered boundary points from the nebula editor."""
 
-        cells = []
+        points = []
 
         lines = value.splitlines()
 
@@ -1900,9 +1893,9 @@ class SMGFrame(wx.Frame):
 
             if match is None:
                 raise ValueError(
-                    "Invalid nebula cell on line "
+                    "Invalid nebula point on line "
                     f"{lineNumber}: {rawLine}\n\n"
-                    "Use one cell per line in the form x,y."
+                    "Use one point per line in the form x,y."
                 )
 
             x = int(
@@ -1919,7 +1912,7 @@ class SMGFrame(wx.Frame):
                     <= self.params["maxX"]
             ):
                 raise ValueError(
-                    f"Nebula cell X coordinate {x} "
+                    f"Nebula point X coordinate {x} "
                     "is outside the current map bounds "
                     f"({self.params['minX']} to "
                     f"{self.params['maxX']})."
@@ -1931,32 +1924,32 @@ class SMGFrame(wx.Frame):
                     <= self.params["maxY"]
             ):
                 raise ValueError(
-                    f"Nebula cell Y coordinate {y} "
+                    f"Nebula point Y coordinate {y} "
                     "is outside the current map bounds "
                     f"({self.params['minY']} to "
                     f"{self.params['maxY']})."
                 )
 
-            cell = (
+            point = (
                 x,
                 y,
             )
 
-            if cell not in cells:
-                cells.append(cell)
+            if point in points:
+                raise ValueError(
+                    f"Nebula point {x},{y} is duplicated."
+                )
 
-        if not cells:
-            raise ValueError(
-                "A nebula must contain at least one map cell."
+            points.append(
+                point
             )
 
-        return sorted(
-            cells,
-            key=lambda cell: (
-                cell[1],
-                cell[0],
-            ),
-        )
+        if len(points) < 3:
+            raise ValueError(
+                "A nebula must contain at least three boundary points."
+            )
+
+        return points
 
     def applyNebulaChanges(self, event):
         """Create or update a nebula."""
@@ -1968,7 +1961,7 @@ class SMGFrame(wx.Frame):
 
     def createNewNebula(self):
         """Create a nebula from the editor values."""
-    
+
         try:
             values = self.readNebulaEditorValues(
                 wx.NOT_FOUND
@@ -1978,31 +1971,31 @@ class SMGFrame(wx.Frame):
                 error
             )
             return
-    
+
         nebula = Nebula(
             name=values["name"],
-            cells=values["cells"],
+            points=values["points"],
             style=values["style"],
             color=values["color"],
             opacity=values["opacity"],
         )
-    
+
         nebula.normalize()
-    
+
         self.nebulaList.append(
             nebula
         )
-    
+
         newIndex = (
                 len(self.nebulaList) - 1
         )
-    
+
         self.leaveNebulaCreateMode()
         self.saveAndRedrawCurrentMap()
         self.refreshNebulaEditor(
             newIndex
         )
-    
+
         self.SetStatusText(
             f'Nebula "{nebula.name}" was created.'
         )
@@ -2020,7 +2013,7 @@ class SMGFrame(wx.Frame):
                 "Select a nebula before applying changes.",
                 "No nebula selected",
                 wx.OK | wx.ICON_INFORMATION,
-                )
+            )
             return
 
         try:
@@ -2039,9 +2032,7 @@ class SMGFrame(wx.Frame):
         nebula.style = values["style"]
         nebula.color = values["color"]
         nebula.opacity = values["opacity"]
-        nebula.cells = values["cells"]
-
-        nebula.normalize()
+        nebula.points = values["points"]
 
         self.saveAndRedrawCurrentMap()
 
@@ -2074,7 +2065,7 @@ class SMGFrame(wx.Frame):
             wx.YES_NO
             | wx.NO_DEFAULT
             | wx.ICON_WARNING,
-            )
+        )
 
         if answer != wx.YES:
             return
@@ -2086,7 +2077,7 @@ class SMGFrame(wx.Frame):
             nextIndex = min(
                 index,
                 len(self.nebulaList) - 1,
-                )
+            )
 
             self.refreshNebulaEditor(
                 nextIndex
@@ -2118,7 +2109,7 @@ class SMGFrame(wx.Frame):
         self.nebulaOpacity.SetValue(
             0.35
         )
-        self.nebulaCells.SetValue("")
+        self.nebulaPoints.SetValue("")
 
         self.nebulaListControl.Enable()
 
@@ -2144,7 +2135,7 @@ class SMGFrame(wx.Frame):
             str(error),
             "Invalid nebula data",
             wx.OK | wx.ICON_ERROR,
-            )
+        )
 
     def generateMap(self, event):
         """Generate a new random star map."""
@@ -2318,7 +2309,7 @@ class SMGFrame(wx.Frame):
         )
 
         self.randomizeSpectralTypesButton.Enable()
-        
+
         self.refreshJumpEditor(system.name)
 
         self.applySystemButton.SetLabel(
@@ -2580,7 +2571,7 @@ class SMGFrame(wx.Frame):
             self.clearSystemDetails()
 
         self.SetStatusText(
-            "New star system creation cancelled."
+            "New star system creation canpointed."
         )
 
     def leaveCreateMode(self):
@@ -3214,10 +3205,10 @@ G2, M4, WD
         self.mapBoundsLabel.SetLabel(
             f'X: {self.params["minX"]} to '
             f'{self.params["maxX"]} '
-            f"({width} cells)\n"
+            f"({width} points)\n"
             f'Y: {self.params["minY"]} to '
             f'{self.params["maxY"]} '
-            f"({height} cells)\n"
+            f"({height} points)\n"
             f'Z: {self.params["minZ"]} to '
             f'{self.params["maxZ"]} '
             f"({depth} levels)"
