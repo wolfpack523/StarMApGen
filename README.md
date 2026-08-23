@@ -19,6 +19,27 @@ daraus eine frei skalierbare SVG-Karte.
 - Systemnamen und Koordinaten als bearbeitbaren SVG-Text ausgeben
 - SVG-Karte direkt im Programm anzeigen
 - DAT- und SVG-Datei nach Änderungen automatisch aktualisieren
+- Nebelregionen hinzufügen, bearbeiten und löschen
+- Nebel als Cloud, Haze oder Outline darstellen
+- Nebel über frei definierbare Stützpunkte formen
+- X- und Y-Koordinaten direkt an der Karte anzeigen
+- Karten zusätzlich als PNG exportieren
+
+## Was ist neu?
+
+Diese Version erweitert StarMapGen deutlich um Funktionen zum Bearbeiten bestehender Sternkarten.
+
+## Was ist neu?
+
+- Nebelregionen können jetzt angelegt, bearbeitet, gelöscht, gespeichert und wieder geladen werden.
+- Nebel werden über frei definierbare Stützpunkte geformt und können als **Cloud**, **Haze** oder **Outline** dargestellt werden.
+- Die Karte zeigt nun X- und Y-Koordinaten zur besseren Orientierung.
+- Karten können zusätzlich als PNG exportiert werden.
+- Für Sprungverbindungen steht jetzt der zusätzliche Status **Lost** zur Verfügung.
+- Spektraltypen können im Systemeditor zufällig neu erzeugt werden.
+- Die Kartenansicht wurde verbessert: Zoomen und Scrollposition bleiben beim Aktualisieren der SVG-Karte erhalten.
+
+Außerdem wurden zahlreiche kleinere Verbesserungen an der SVG-Erzeugung, Datenverarbeitung und Benutzeroberfläche vorgenommen.
 
 ## Programm starten
 
@@ -43,11 +64,13 @@ Voraussetzungen:
 
 - Python 3.11 oder neuer
 - wxPython 4.2.x
+- resvg-py
 
 Abhängigkeiten installieren:
 
 ```text
 python -m pip install wxPython
+python -m pip install wxPython resvg-py
 ```
 
 Programm starten:
@@ -146,6 +169,8 @@ Beim Laden werden folgende Daten übernommen:
 - Spektraltypen
 - Sprungverbindungen
 - Zustände der Sprungverbindungen
+- Nebelregionen
+- Form, Farbe, Transparenz und Darstellungsstil der Nebel
 
 Ältere DAT-Dateien ohne gespeicherte Kartengrenzen werden ebenfalls
 unterstützt. In diesem Fall ermittelt StarMapGen die Grenzen aus den
@@ -180,6 +205,31 @@ Skalierung der Systemnamen und Koordinaten innerhalb der SVG-Karte.
 
 Legt fest, ob die Z-Koordinate an den Sternensystemen angezeigt wird.
 
+#### Export PNG
+
+Die aktuelle SVG-Karte kann zusätzlich als PNG-Datei exportiert werden.
+
+Dazu im Bereich `Map Files and Display` auf
+
+```text
+Export PNG
+```
+klicken.
+
+Die PNG-Datei wird unter demselben Namen wie die SVG-Datei gespeichert.
+
+Beispiel:
+
+```text
+sampleMap.svg
+sampleMap.png
+```
+
+Der SVG-Export bleibt weiterhin das primäre Kartenformat. Das PNG eignet sich
+beispielsweise für Bilder, Dokumente oder Anwendungen, die kein SVG
+unterstützen.
+
+
 ### Kartengrenzen
 
 Der Bereich Map Bounds zeigt die aktuellen Grenzen der Karte:
@@ -206,6 +256,18 @@ Beim Erweitern werden bestehende Sternensysteme nicht verschoben. Es werden
 ausschließlich die äußeren Grenzen der Karte verändert.
 
 Die Karte kann derzeit erweitert, aber nicht verkleinert werden.
+
+### Koordinaten auf der Karte
+
+Zur besseren Orientierung werden die X-Koordinaten am oberen Kartenrand
+und die Y-Koordinaten am linken Kartenrand angezeigt.
+
+Die Beschriftungen entsprechen den tatsächlichen Kartenkoordinaten und
+berücksichtigen auch negative beziehungsweise nachträglich erweiterte
+Kartengrenzen.
+
+Dadurch lassen sich insbesondere Sternsysteme und Nebel-Stützpunkte leichter
+auf der Karte einordnen.
 
 ### Sternensysteme bearbeiten
 
@@ -335,26 +397,127 @@ bearbeitet und entfernt werden.
 
 Verfügbare Zustände:
 
-|Status|Darstellung|
-|---|---|
-|Normal|Weiße durchgezogene Linie|
-|Caution|Gelbe gestrichelte Linie|
-|Dangerous|Orange hervorgehobene Linie|
-|Blocked|Rote, deutlich gestrichelte Linie|
+|Status| Darstellung           |
+|---|-----------------------|
+|Normal| Weiße durchgezogene Linie |
+|Caution| Gelbe gestrichelte Linie |
+|Dangerous| Orange hervorgehobene Linie |
+|Blocked| Rote, deutlich gestrichelte Linie |
+|Lost| Blau, gepunktete Linie|
 
 Eine Verbindung wird nur einmal gespeichert, gilt aber für beide
 beteiligten Systeme.
 
+## Nebelregionen
+
+
+Im Bereich `Nebulae` können Nebelregionen für die aktuelle Karte angelegt,
+bearbeitet und gelöscht werden.
+
+
+Ein Nebel besitzt folgende Eigenschaften:
+
+
+- Name
+- Darstellungsstil
+- Farbe
+- Transparenz
+- eine Liste von Stützpunkten
+
+
+### Neuen Nebel anlegen
+
+
+Auf
+```text
+New Nebula
+```
+klicken.
+
+Anschließend Name, Stil, Farbe, Transparenz und mindestens drei
+Stützpunkte eintragen.
+
+Beispiel:
+```text
+4,4
+8,3
+11,6
+10,10
+7,12
+3,9
+```
+Die Punkte werden in der angegebenen Reihenfolge miteinander verbunden.
+Der letzte Punkt wird automatisch wieder mit dem ersten Punkt verbunden.
+
+Die Punktreihenfolge bestimmt damit direkt die Form des Nebels.
+
+#### Nebel-Stile
+
+Folgende Darstellungsarten stehen zur Verfügung:
+
+|Stil|Beschreibung|
+|---|---|
+|Cloud|Gefüllte, weich geschwungene Nebelregion|
+|Haze|Transparentere und stärker geglättete Nebelregion mit breiterem Rand|
+|Outline|Zeigt nur die äußere Kontur des Nebels|
+
+####Farbe
+
+Die Farbe wird als hexadezimaler RGB-Wert angegeben.
+
+Beispiel:
+```text
+#7a2f8f
+```
+#### Opacity
+
+Die Transparenz wird als Wert zwischen ```0.0``` und ```1.0``` angegeben.
+
+Beispiele:
+```text
+0.20
+0.35
+0.75
+1.00
+```
+Ein kleiner Wert erzeugt einen transparenteren Nebel.
+
+#### Stützpunkte
+
+Jeder Punkt wird als X- und Y-Koordinate angegeben:
+```text
+x,y
+```
+Beispiel:
+```
+5,7
+```
+Die Koordinaten müssen innerhalb der aktuellen Kartengrenzen liegen.
+
+Ein Nebel benötigt mindestens drei unterschiedliche Punkte.
+
+Die Stützpunkte werden nicht automatisch sortiert. Ihre Reihenfolge ist
+wichtig, da sie die Kontur des Nebels festlegt.
+
+Änderungen werden mit
+
+```text
+Apply Changes
+```
+
+übernommen und anschließend sowohl in der DAT-Datei als auch in der
+SVG-Karte gespeichert.
+
 ## DAT-Datei
 
 Aktuelle DAT-Dateien enthalten die vollständigen Kartengrenzen:
-  
+
 ```text 
 Map Minimum: (1,1,-10)
 Map Maximum: (20,20,9)
 ```
 
-Danach folgen die Sternensysteme und Sprungverbindungen.
+Danach folgen die Sternensysteme, Sprungverbindungen und Nebelregionen.
 
 Die Datei kann grundsätzlich mit einem Texteditor geöffnet werden. Für
 manuelle Änderungen sollte vorher eine Sicherungskopie erstellt werden.
@@ -364,7 +527,8 @@ manuelle Änderungen sollte vorher eine Sicherungskopie erstellt werden.
 Nach Änderungen an
 
 - Sternensystemen,
-- Sprungverbindungen oder
+- Sprungverbindungen,
+- Nebelregionen oder
 - Kartengrenzen
 
 werden die DAT-Datei und die SVG-Karte automatisch neu geschrieben.
@@ -428,6 +592,8 @@ StarMapGen/
 │       ├── SMGMapPanel.py
 │       ├── StarSystem.py
 │       ├── JumpLink.py
+│       ├── Nebula.py
+│       ├── exportPng.py
 │       ├── loadData.py
 │       ├── writeData.py
 │       └── makeMap.py
@@ -449,7 +615,3 @@ verbreitet werden darf.
 
 Sobald die Lizenzfrage geklärt ist, sollte dem Projekt eine passende
 LICENSE-Datei hinzugefügt werden.
-
-```text
- ​:contentReference[oaicite:0]{index=0}​
-```
