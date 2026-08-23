@@ -67,3 +67,37 @@ def writeConnectionData(params, jumpList):
             )
 
         file.write("\n")
+        
+def writeNebulaData(params, nebulaList):
+    """Append all nebulae to the DAT file."""
+
+    with open(
+            params["datafile"],
+            "a",
+            encoding="utf-8",
+    ) as file:
+        for nebula in nebulaList:
+            file.write(
+                f"Nebula: {nebula.name}\n"
+            )
+
+            file.write(
+                f"Style: {nebula.style}\n"
+            )
+
+            file.write(
+                f"Color: {nebula.color}\n"
+            )
+
+            file.write(
+                f"Opacity: {nebula.opacity:.2f}\n"
+            )
+
+            cells = ", ".join(
+                f"({x},{y})"
+                for x, y in nebula.cells
+            )
+
+            file.write(
+                f"Cells: {cells}\n\n"
+            )

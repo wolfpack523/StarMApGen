@@ -17,7 +17,11 @@ from makeMap import (
 )
 from SMGMapPanel import SMGMapPanel
 from StarSystem import StarSystem
-from writeData import writeConnectionData, writeSystemData
+from writeData import (
+    writeConnectionData,
+    writeNebulaData,
+    writeSystemData,
+)
 from JumpLink import JumpLink
 from Nebula import Nebula
 
@@ -2230,6 +2234,11 @@ class SMGFrame(wx.Frame):
             self.jumpList,
         )
 
+        writeNebulaData(
+            self.params,
+            self.nebulaList,
+        )
+
     def saveAndRedrawCurrentMap(self):
         """Save the current data and refresh the SVG preview."""
 
@@ -3597,6 +3606,7 @@ G2, M4, WD
 
         loadedStarList = []
         loadedJumpList = []
+        loadedNebulaList = []
 
         try:
             loadData(
@@ -3604,6 +3614,8 @@ G2, M4, WD
                 params,
                 loadedStarList,
                 loadedJumpList,
+                loadedNebulaList
+
             )
         except (OSError, ValueError) as error:
             wx.MessageBox(
@@ -3619,6 +3631,7 @@ G2, M4, WD
         self.params = params
         self.starList = loadedStarList
         self.jumpList = loadedJumpList
+        self.nebulaList = loadedNebulaList
 
         self.renderCurrentMap()
         self.drawMap(self.params["filename"])

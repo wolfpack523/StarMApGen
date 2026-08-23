@@ -1,6 +1,7 @@
 import re
 
 from JumpLink import JumpLink
+from Nebula import Nebula
 from StarSystem import StarSystem
 
 SYSTEM_NAME_PATTERN = re.compile(
@@ -17,6 +18,30 @@ STAR_COUNT_PATTERN = re.compile(
 
 SPECTRAL_TYPES_PATTERN = re.compile(
     r"^Spectral Types:\s*(.*)$"
+)
+
+NEBULA_NAME_PATTERN = re.compile(
+    r"^Nebula:\s*(.*)$"
+)
+
+NEBULA_STYLE_PATTERN = re.compile(
+    r"^Style:\s*(.*)$"
+)
+
+NEBULA_COLOR_PATTERN = re.compile(
+    r"^Color:\s*(#[0-9a-fA-F]{6})$"
+)
+
+NEBULA_OPACITY_PATTERN = re.compile(
+    r"^Opacity:\s*([0-9]*\.?[0-9]+)$"
+)
+
+NEBULA_CELLS_PATTERN = re.compile(
+    r"^Cells:\s*(.*)$"
+)
+
+NEBULA_CELL_PATTERN = re.compile(
+    r"\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)"
 )
 
 MAP_MINIMUM_PATTERN = re.compile(
@@ -41,9 +66,11 @@ def loadData(
         params,
         systemList,
         jumpList,
+        nebulaList=None,
 ):
     """Load map bounds, star systems and jump links from a DAT file."""
-
+    if nebulaList is None:
+        nebulaList = []
     declaredMinimum = None
     declaredMaximum = None
 
@@ -93,6 +120,22 @@ def loadData(
                 systemList.append(system)
                 continue
 
+            nebulaMatch = NEBULA_NAME_PATTERN.match(
+                line
+            )
+
+            if nebulaMatch:
+                nebula = readNebula(
+                    file,
+                    nebulaMatch.group(1).strip(),
+                )
+
+                nebulaList.append(
+                    nebula
+                )
+
+                continue
+                
             linkMatch = LINK_PATTERN.match(line)
 
             if linkMatch:
@@ -332,6 +375,133 @@ def readSystem(file, params, name):
 
     return system
 
+def readNebula(
+        file,
+        name,
+):
+    """Read the remaining data belonging to one nebula."""
+
+    styleLine = readRequiredLine(
+        file,
+        f'style for nebula "{name}"',
+    )
+
+    styleMatch = NEBULA_STYLE_PATTERN.match(
+        styleLine.strip()
+    )
+
+    if styleMatch is None:
+        raise ValueError(
+            f'Invalid style for nebula "{name}": '
+            f'"{styleLine.strip()}"'
+        )
+
+    style = (
+        styleMatch
+        .group(1)
+        .strip()
+        .lower()
+    )
+
+    if style not in Nebula.VALID_STYLES:
+        raise ValueError(
+            f'Unsupported style "{style}" '
+            f'for nebula "{name}".'
+        )
+
+
+    colorLine = readRequiredLine(
+        file,
+        f'color for nebula "{name}"',
+    )
+
+    colorMatch = NEBULA_COLOR_PATTERN.match(
+        colorLine.strip()
+    )
+
+    if colorMatch is None:
+        raise ValueError(
+            f'Invalid color for nebula "{name}": '
+            f'"{colorLine.strip()}"'
+        )
+
+    color = (
+        colorMatch
+        .group(1)
+        .lower()
+    )
+
+
+    opacityLine = readRequiredLine(
+        file,
+        f'opacity for nebula "{name}"',
+    )
+
+    opacityMatch = NEBULA_OPACITY_PATTERN.match(
+        opacityLine.strip()
+    )
+
+    if opacityMatch is None:
+        raise ValueError(
+            f'Invalid opacity for nebula "{name}": '
+            f'"{opacityLine.strip()}"'
+        )
+
+    opacity = float(
+        opacityMatch.group(1)
+    )
+
+    if not 0.0 <= opacity <= 1.0:
+        raise ValueError(
+            f'Opacity for nebula "{name}" '
+            "must be between 0 and 1."
+        )
+
+
+    cellsLine = readRequiredLine(
+        file,
+        f'cells for nebula "{name}"',
+    )
+
+    cellsMatch = NEBULA_CELLS_PATTERN.match(
+        cellsLine.strip()
+    )
+
+    if cellsMatch is None:
+        raise ValueError(
+            f'Invalid cells for nebula "{name}": '
+            f'"{cellsLine.strip()}"'
+        )
+
+    cellsText = cellsMatch.group(1)
+
+    cells = [
+        (
+            int(match.group(1)),
+            int(match.group(2)),
+        )
+        for match in NEBULA_CELL_PATTERN.finditer(
+            cellsText
+        )
+    ]
+
+    if not cells:
+        raise ValueError(
+            f'Nebula "{name}" must contain '
+            "at least one cell."
+        )
+
+    nebula = Nebula(
+        name=name,
+        cells=cells,
+        style=style,
+        color=color,
+        opacity=opacity,
+    )
+
+    nebula.normalize()
+
+    return nebula
 
 def readRequiredLine(file, description):
     """Read one required line and report truncated DAT files."""
