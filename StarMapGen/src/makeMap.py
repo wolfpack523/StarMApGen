@@ -836,10 +836,19 @@ def writeNebula(
         nebula,
         index,
 ):
-    """Draw one nebula using its configured style."""
+    """Draw one nebula polygon."""
 
-    if not nebula.cells:
+    if len(nebula.points) < 3:
         return
+
+    points = getNebulaSvgPoints(
+        params,
+        nebula,
+    )
+
+    pointText = formatNebulaPoints(
+        points
+    )
 
     file.write(
         f'<g id="nebula-{index}" '
@@ -848,36 +857,49 @@ def writeNebula(
     )
 
     if nebula.style == "outline":
-        writeNebulaOutline(
-            params,
-            file,
-            nebula,
+        file.write(
+            '<polygon '
+            f'points="{pointText}" '
+            'fill="none" '
+            f'stroke="{nebula.color}" '
+            f'stroke-opacity="{nebula.opacity:f}" '
+            f'stroke-width="{6 * p2mm:f}" '
+            'stroke-linejoin="round" '
+            '/>\n'
         )
 
     elif nebula.style == "haze":
-        writeNebulaHaze(
-            params,
-            file,
-            nebula,
+        file.write(
+            '<polygon '
+            f'points="{pointText}" '
+            f'fill="{nebula.color}" '
+            f'fill-opacity="{nebula.opacity * 0.55:f}" '
+            f'stroke="{nebula.color}" '
+            f'stroke-opacity="{nebula.opacity * 0.35:f}" '
+            f'stroke-width="{10 * p2mm:f}" '
+            'stroke-linejoin="round" '
+            '/>\n'
         )
 
     else:
-        writeNebulaCloud(
-            params,
-            file,
-            nebula,
+        file.write(
+            '<polygon '
+            f'points="{pointText}" '
+            f'fill="{nebula.color}" '
+            f'fill-opacity="{nebula.opacity:f}" '
+            'stroke="none" '
+            '/>\n'
         )
 
     file.write(
         "</g>\n"
     )
 
-
-def getNebulaCellPosition(
+def getNebulaSvgPoints(
         params,
-        cell,
+        nebula,
 ):
-    """Convert an absolute nebula cell to local SVG coordinates."""
+    """Convert nebula map points to SVG coordinates."""
 
     minX = params.get(
         "minX",
@@ -889,223 +911,49 @@ def getNebulaCellPosition(
         1,
     )
 
-    x, y = cell
+    svgPoints = []
 
-    localX = (
-            x
-            - minX
-            + 1
-    )
+    for x, y in nebula.points:
+        localX = (
+                x
+                - minX
+                + 1
+        )
 
-    localY = (
-            y
-            - minY
-            + 1
-    )
+        localY = (
+                y
+                - minY
+                + 1
+        )
 
-    centerX = (
-            localX
-            * 150
-    )
+        svgX = (
+                localX
+                * 150
+                * p2mm
+        )
 
-    centerY = (
-            localY
-            * 150
-    )
+        svgY = (
+                localY
+                * 150
+                * p2mm
+        )
 
-    return (
-        centerX,
-        centerY,
-    )
-
-
-def writeNebulaCloud(
-        params,
-        file,
-        nebula,
-):
-    """Draw a nebula as overlapping translucent clouds."""
-
-    radius = 95
-
-    for cell in nebula.cells:
-        centerX, centerY = (
-            getNebulaCellPosition(
-                params,
-                cell,
+        svgPoints.append(
+            (
+                svgX,
+                svgY,
             )
         )
 
-        file.write(
-            '<circle '
-            f'cx="{centerX * p2mm:f}" '
-            f'cy="{centerY * p2mm:f}" '
-            f'r="{radius * p2mm:f}" '
-            f'fill="{nebula.color}" '
-            f'fill-opacity="{nebula.opacity:f}" '
-            'stroke="none" />\n'
-        )
+    return svgPoints
 
+def formatNebulaPoints(points):
+    """Format SVG polygon points."""
 
-def writeNebulaHaze(
-        params,
-        file,
-        nebula,
-):
-    """Draw a nebula as a wide diffuse haze."""
-
-    radius = 125
-
-    hazeOpacity = (
-            nebula.opacity
-            * 0.55
+    return " ".join(
+        f"{x:f},{y:f}"
+        for x, y in points
     )
-
-    for cell in nebula.cells:
-        centerX, centerY = (
-            getNebulaCellPosition(
-                params,
-                cell,
-            )
-        )
-
-        file.write(
-            '<circle '
-            f'cx="{centerX * p2mm:f}" '
-            f'cy="{centerY * p2mm:f}" '
-            f'r="{radius * p2mm:f}" '
-            f'fill="{nebula.color}" '
-            f'fill-opacity="{hazeOpacity:f}" '
-            'stroke="none" />\n'
-        )
-
-
-def writeNebulaOutline(
-        params,
-        file,
-        nebula,
-):
-    """Draw only the outer edges of a nebula region."""
-
-    cells = set(
-        nebula.cells
-    )
-
-    halfSize = 75
-
-    strokeWidth = (
-            6
-            * p2mm
-    )
-
-    for cell in cells:
-        x, y = cell
-
-        centerX, centerY = (
-            getNebulaCellPosition(
-                params,
-                cell,
-            )
-        )
-
-        left = (
-                centerX
-                - halfSize
-        )
-
-        right = (
-                centerX
-                + halfSize
-        )
-
-        top = (
-                centerY
-                - halfSize
-        )
-
-        bottom = (
-                centerY
-                + halfSize
-        )
-
-        # Top edge
-        if (x, y - 1) not in cells:
-            writeNebulaLine(
-                file,
-                left,
-                top,
-                right,
-                top,
-                nebula.color,
-                nebula.opacity,
-                strokeWidth,
-            )
-
-        # Right edge
-        if (x + 1, y) not in cells:
-            writeNebulaLine(
-                file,
-                right,
-                top,
-                right,
-                bottom,
-                nebula.color,
-                nebula.opacity,
-                strokeWidth,
-            )
-
-        # Bottom edge
-        if (x, y + 1) not in cells:
-            writeNebulaLine(
-                file,
-                left,
-                bottom,
-                right,
-                bottom,
-                nebula.color,
-                nebula.opacity,
-                strokeWidth,
-            )
-
-        # Left edge
-        if (x - 1, y) not in cells:
-            writeNebulaLine(
-                file,
-                left,
-                top,
-                left,
-                bottom,
-                nebula.color,
-                nebula.opacity,
-                strokeWidth,
-            )
-
-
-def writeNebulaLine(
-        file,
-        x1,
-        y1,
-        x2,
-        y2,
-        color,
-        opacity,
-        strokeWidth,
-):
-    """Write one SVG line belonging to a nebula outline."""
-
-    file.write(
-        '<line '
-        f'x1="{x1 * p2mm:f}" '
-        f'y1="{y1 * p2mm:f}" '
-        f'x2="{x2 * p2mm:f}" '
-        f'y2="{y2 * p2mm:f}" '
-        f'stroke="{color}" '
-        f'stroke-opacity="{opacity:f}" '
-        f'stroke-width="{strokeWidth:f}" '
-        'stroke-linecap="round" '
-        'stroke-linejoin="round" />\n'
-    )
-
 
 def escapeSvgAttribute(value):
     """Escape text used inside an SVG attribute."""
