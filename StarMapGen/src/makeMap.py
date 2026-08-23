@@ -801,6 +801,322 @@ def writeNames(p, f, sList):
         data += "%s</text></g>\n" % s.name
         f.write(data)
 
+def writeNebulae(
+        params,
+        file,
+        nebulaList,
+):
+    """Draw all nebulae below the map grid."""
+
+    if not nebulaList:
+        return
+
+    file.write(
+        '<g id="nebulae">\n'
+    )
+
+    for index, nebula in enumerate(
+            nebulaList
+    ):
+        writeNebula(
+            params,
+            file,
+            nebula,
+            index,
+        )
+
+    file.write(
+        "</g>\n"
+    )
+
+
+def writeNebula(
+        params,
+        file,
+        nebula,
+        index,
+):
+    """Draw one nebula using its configured style."""
+
+    if not nebula.cells:
+        return
+
+    file.write(
+        f'<g id="nebula-{index}" '
+        f'data-nebula-name="{escapeSvgAttribute(nebula.name)}" '
+        f'data-nebula-style="{nebula.style}">\n'
+    )
+
+    if nebula.style == "outline":
+        writeNebulaOutline(
+            params,
+            file,
+            nebula,
+        )
+
+    elif nebula.style == "haze":
+        writeNebulaHaze(
+            params,
+            file,
+            nebula,
+        )
+
+    else:
+        writeNebulaCloud(
+            params,
+            file,
+            nebula,
+        )
+
+    file.write(
+        "</g>\n"
+    )
+
+
+def getNebulaCellPosition(
+        params,
+        cell,
+):
+    """Convert an absolute nebula cell to local SVG coordinates."""
+
+    minX = params.get(
+        "minX",
+        1,
+    )
+
+    minY = params.get(
+        "minY",
+        1,
+    )
+
+    x, y = cell
+
+    localX = (
+            x
+            - minX
+            + 1
+    )
+
+    localY = (
+            y
+            - minY
+            + 1
+    )
+
+    centerX = (
+            localX
+            * 150
+    )
+
+    centerY = (
+            localY
+            * 150
+    )
+
+    return (
+        centerX,
+        centerY,
+    )
+
+
+def writeNebulaCloud(
+        params,
+        file,
+        nebula,
+):
+    """Draw a nebula as overlapping translucent clouds."""
+
+    radius = 95
+
+    for cell in nebula.cells:
+        centerX, centerY = (
+            getNebulaCellPosition(
+                params,
+                cell,
+            )
+        )
+
+        file.write(
+            '<circle '
+            f'cx="{centerX * p2mm:f}" '
+            f'cy="{centerY * p2mm:f}" '
+            f'r="{radius * p2mm:f}" '
+            f'fill="{nebula.color}" '
+            f'fill-opacity="{nebula.opacity:f}" '
+            'stroke="none" />\n'
+        )
+
+
+def writeNebulaHaze(
+        params,
+        file,
+        nebula,
+):
+    """Draw a nebula as a wide diffuse haze."""
+
+    radius = 125
+
+    hazeOpacity = (
+            nebula.opacity
+            * 0.55
+    )
+
+    for cell in nebula.cells:
+        centerX, centerY = (
+            getNebulaCellPosition(
+                params,
+                cell,
+            )
+        )
+
+        file.write(
+            '<circle '
+            f'cx="{centerX * p2mm:f}" '
+            f'cy="{centerY * p2mm:f}" '
+            f'r="{radius * p2mm:f}" '
+            f'fill="{nebula.color}" '
+            f'fill-opacity="{hazeOpacity:f}" '
+            'stroke="none" />\n'
+        )
+
+
+def writeNebulaOutline(
+        params,
+        file,
+        nebula,
+):
+    """Draw only the outer edges of a nebula region."""
+
+    cells = set(
+        nebula.cells
+    )
+
+    halfSize = 75
+
+    strokeWidth = (
+            6
+            * p2mm
+    )
+
+    for cell in cells:
+        x, y = cell
+
+        centerX, centerY = (
+            getNebulaCellPosition(
+                params,
+                cell,
+            )
+        )
+
+        left = (
+                centerX
+                - halfSize
+        )
+
+        right = (
+                centerX
+                + halfSize
+        )
+
+        top = (
+                centerY
+                - halfSize
+        )
+
+        bottom = (
+                centerY
+                + halfSize
+        )
+
+        # Top edge
+        if (x, y - 1) not in cells:
+            writeNebulaLine(
+                file,
+                left,
+                top,
+                right,
+                top,
+                nebula.color,
+                nebula.opacity,
+                strokeWidth,
+            )
+
+        # Right edge
+        if (x + 1, y) not in cells:
+            writeNebulaLine(
+                file,
+                right,
+                top,
+                right,
+                bottom,
+                nebula.color,
+                nebula.opacity,
+                strokeWidth,
+            )
+
+        # Bottom edge
+        if (x, y + 1) not in cells:
+            writeNebulaLine(
+                file,
+                left,
+                bottom,
+                right,
+                bottom,
+                nebula.color,
+                nebula.opacity,
+                strokeWidth,
+            )
+
+        # Left edge
+        if (x - 1, y) not in cells:
+            writeNebulaLine(
+                file,
+                left,
+                top,
+                left,
+                bottom,
+                nebula.color,
+                nebula.opacity,
+                strokeWidth,
+            )
+
+
+def writeNebulaLine(
+        file,
+        x1,
+        y1,
+        x2,
+        y2,
+        color,
+        opacity,
+        strokeWidth,
+):
+    """Write one SVG line belonging to a nebula outline."""
+
+    file.write(
+        '<line '
+        f'x1="{x1 * p2mm:f}" '
+        f'y1="{y1 * p2mm:f}" '
+        f'x2="{x2 * p2mm:f}" '
+        f'y2="{y2 * p2mm:f}" '
+        f'stroke="{color}" '
+        f'stroke-opacity="{opacity:f}" '
+        f'stroke-width="{strokeWidth:f}" '
+        'stroke-linecap="round" '
+        'stroke-linejoin="round" />\n'
+    )
+
+
+def escapeSvgAttribute(value):
+    """Escape text used inside an SVG attribute."""
+
+    return (
+        str(value)
+        .replace("&", "&amp;")
+        .replace('"', "&quot;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
 
 def createMap(
         params,
@@ -808,7 +1124,11 @@ def createMap(
         symbolList,
         connectionList,
         starList,
+        nebulaList=None,
 ):
+    if nebulaList is None:
+        nebulaList = []
+
     minX = params.get("minX", 1)
     minY = params.get("minY", 1)
 
@@ -866,6 +1186,12 @@ def createMap(
         )
 
         file.write("</g>\n")
+
+        writeNebulae(
+            params,
+            file,
+            nebulaList,
+        )
 
         file.write(
             '<g id="grid" '

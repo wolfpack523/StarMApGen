@@ -1994,6 +1994,7 @@ class SMGFrame(wx.Frame):
         )
     
         self.leaveNebulaCreateMode()
+        self.saveAndRedrawCurrentMap()
         self.refreshNebulaEditor(
             newIndex
         )
@@ -2038,6 +2039,8 @@ class SMGFrame(wx.Frame):
 
         nebula.normalize()
 
+        self.saveAndRedrawCurrentMap()
+
         self.refreshNebulaEditor(
             index
         )
@@ -2074,6 +2077,7 @@ class SMGFrame(wx.Frame):
 
         del self.nebulaList[index]
 
+        self.saveAndRedrawCurrentMap()
         if self.nebulaList:
             nextIndex = min(
                 index,
@@ -2210,6 +2214,7 @@ class SMGFrame(wx.Frame):
             symbolList,
             connectionList,
             self.starList,
+            self.nebulaList,
         )
 
     def saveCurrentMap(self):
@@ -3618,6 +3623,7 @@ G2, M4, WD
         self.renderCurrentMap()
         self.drawMap(self.params["filename"])
         self.refreshSystemEditor()
+        self.refreshNebulaEditor()
         self.refreshMapBounds()
 
         self.SetStatusText(
