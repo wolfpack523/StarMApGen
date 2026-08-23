@@ -3155,6 +3155,7 @@ class SMGFrame(wx.Frame):
 
         return {
             "name": name,
+            "faction": faction,
             "x": x,
             "y": y,
             "z": z,
