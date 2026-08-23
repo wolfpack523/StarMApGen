@@ -9,6 +9,10 @@ SYSTEM_NAME_PATTERN = re.compile(
     r"^Name:\s*(.*)$"
 )
 
+FACTION_PATTERN = re.compile(
+    r'^Faction:\s*"([^"]+)"\s+"([^"]*)"\s*$'
+)
+
 COORDINATE_PATTERN = re.compile(
     r"\((-?\d+),\s*(-?\d+),\s*(-?\d+)\)"
 )
@@ -18,7 +22,12 @@ STAR_COUNT_PATTERN = re.compile(
 )
 
 PLANET_PATTERN = re.compile(
-    r'^Planet:\s*"([^"]+)"\s+"([^"]+)"\s+"([^"]+)"\s*$'
+    r'^Planet:\s*'
+    r'"([^"]+)"\s+'
+    r'"([^"]+)"\s+'
+    r'"([^"]+)"'
+    r'(?:\s+"([^"]+)")?'
+    r'\s*$'
 )
 
 SPECTRAL_TYPES_PATTERN = re.compile(
@@ -215,12 +224,63 @@ def loadData(
 
                     planetType = Planet.TYPE_OTHER
 
+                classification = (
+                        planetMatch.group(4)
+                        or Planet.DEFAULT_CLASSIFICATION
+                )
+
+                if classification not in Planet.CLASSIFICATIONS:
+                    print(
+                        f'Unknown planet classification '
+                        f'"{classification}" for "{planetName}". '
+                        f'Using "{Planet.DEFAULT_CLASSIFICATION}".'
+                    )
+
+                    classification = (
+                        Planet.DEFAULT_CLASSIFICATION
+                    )
+
                 system.planets.append(
                     Planet(
                         name=planetName,
                         planetType=planetType,
+                        classification=classification,
                     )
                 )
+
+                continue
+
+            factionMatch = FACTION_PATTERN.match(
+                line
+            )
+
+            if factionMatch:
+                systemName = (
+                    factionMatch.group(1).strip()
+                )
+
+                faction = (
+                    factionMatch.group(2).strip()
+                )
+
+                system = next(
+                    (
+                        item
+                        for item in systemList
+                        if item.name == systemName
+                    ),
+                    None,
+                )
+
+                if system is None:
+                    print(
+                        f'Ignoring faction for '
+                        f'unknown system "{systemName}".'
+                    )
+
+                    continue
+
+                system.faction = faction
 
                 continue
 
@@ -556,6 +616,7 @@ def readNebula(
     )
 
     return nebula
+
 
 def readRequiredLine(file, description):
     """Read one required line and report truncated DAT files."""

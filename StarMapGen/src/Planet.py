@@ -23,19 +23,62 @@ class Planet:
 
     TYPE_LABELS = {
         TYPE_TERRAN: "Terran",
-        TYPE_BARREN: "Barren",
-        TYPE_GAS_GIANT: "Gas Giant",
-        TYPE_ICE: "Ice World",
-        TYPE_OCEAN: "Ocean World",
-        TYPE_DESERT: "Desert World",
-        TYPE_VOLCANIC: "Volcanic World",
-        TYPE_OTHER: "Other",
+        TYPE_BARREN: "Karg",
+        TYPE_GAS_GIANT: "Gasriese",
+        TYPE_ICE: "Eiswelt",
+        TYPE_OCEAN: "Ozeanwelt",
+        TYPE_DESERT: "Wüstenwelt",
+        TYPE_VOLCANIC: "Vulkanwelt",
+        TYPE_OTHER: "Sonstiges",
     }
+
+    CLASSIFICATIONS = (
+        "Agrarwelt",
+        "Bergwerksplanet",
+        "Bibliothekswelt",
+        "Dschungelplanet",
+        "Eiswelt",
+        "Fabrikwelt",
+        "Festungswelt",
+        "Feudalwelt",
+        "Forschungsstation",
+        "Gartenwelt",
+        "Grenzwelt",
+        "Höhlenwelt",
+        "Industriewelt",
+        "Leblose Welt",
+        "Makropolwelt",
+        "Munitorumswelt",
+        "Nachtwelt",
+        "Ordenswelt",
+        "Ozeanwelt",
+        "Ritterwelt",
+        "Schreinwelt",
+        "Todeswelt",
+        "Trophäenwelt",
+        "Urzeitwelt",
+        "Waldplanet",
+        "Wüstenplanet",
+        "Zivilisierte Welt",
+        "Dämonenwelt",
+        "Exoditenwelt",
+        "Gasriese",
+        "Gruftwelt",
+        "Hexenwelt",
+        "Jungfernwelt",
+        "Orkwelten",
+        "Tauwelten",
+        "Weltenschiff",
+        "Sonstige Welt",
+    )
+
+    DEFAULT_CLASSIFICATION = "Sonstige Welt"
 
     def __init__(
             self,
             name="Planet",
             planetType=TYPE_OTHER,
+            classification=DEFAULT_CLASSIFICATION,
     ):
         self.name = name.strip()
 
@@ -43,6 +86,12 @@ class Planet:
             planetType
             if planetType in self.VALID_TYPES
             else self.TYPE_OTHER
+        )
+
+        self.classification = (
+            classification
+            if classification in self.CLASSIFICATIONS
+            else self.DEFAULT_CLASSIFICATION
         )
 
     def getTypeLabel(self):

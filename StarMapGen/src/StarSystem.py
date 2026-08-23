@@ -18,6 +18,7 @@ class StarSystem:
 
         self.mParams = params
         self.name = ""
+        self.faction = ""
 
         if generate:
             self._generatePosition()
