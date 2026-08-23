@@ -537,6 +537,7 @@ def writeMapHeader(f, w, h):
     f.write(
         '<svg '
         'xmlns="http://www.w3.org/2000/svg" '
+        'xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" '
         'version="1.1" '
         f'viewBox="0 0 {w:.6f} {h:.6f}" '
         f'width="{w:.6f}" '

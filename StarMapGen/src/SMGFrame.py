@@ -1,5 +1,6 @@
 import re
 import random
+import threading
 
 import wx
 import wx.lib.intctrl
@@ -24,6 +25,7 @@ from writeData import (
 )
 from JumpLink import JumpLink
 from Nebula import Nebula
+from exportPng import exportPng
 
 JUMP_STATUS_OPTIONS = [
     (
@@ -541,7 +543,7 @@ class SMGFrame(wx.Frame):
 
         filesSizer.Add(
             printZRow,
-            0,
+           0,
             wx.ALL | wx.EXPAND,
             5,
         )
@@ -562,6 +564,25 @@ class SMGFrame(wx.Frame):
 
         fileButtonSizer.Add(
             loadButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.exportPngButton = wx.Button(
+            filesParent,
+            label="Export PNG",
+        )
+
+        self.exportPngButton.Bind(
+            wx.EVT_BUTTON,
+            self.onExportPng,
+        )
+
+        self.exportPngButton.Disable()
+
+        fileButtonSizer.Add(
+            self.exportPngButton,
             0,
             wx.RIGHT,
             5,
@@ -2177,6 +2198,7 @@ class SMGFrame(wx.Frame):
         self.drawMap(self.params["filename"])
         self.refreshSystemEditor()
         self.refreshNebulaEditor()
+        self.refreshExportControls()
         self.refreshMapBounds()
 
         self.SetStatusText(
@@ -3095,6 +3117,7 @@ G2, M4, WD
 
     def resetParameters(self, event):
         self.setDefaults()
+        self.exportPngButton.Disable()
         self.SetStatusText(
             "Map parameters reset."
         )
@@ -3628,9 +3651,102 @@ G2, M4, WD
         self.drawMap(self.params["filename"])
         self.refreshSystemEditor()
         self.refreshNebulaEditor()
+        self.refreshExportControls()
         self.refreshMapBounds()
 
         self.SetStatusText(
             f"{len(self.starList)} star systems were loaded "
             f'from "{dataFilename}".'
+        )
+
+    def onExportPng(self, event):
+        """Export the current SVG map to PNG in a background thread."""
+    
+        if not self.params:
+            return
+    
+        svgFile = self.params.get(
+            "filename"
+        )
+    
+        if not svgFile:
+            return
+    
+        self.exportPngButton.Disable()
+    
+        self.SetStatusText(
+            "Exporting PNG..."
+        )
+    
+        thread = threading.Thread(
+            target=self.exportPngWorker,
+            args=(svgFile,),
+            daemon=True,
+        )
+    
+        thread.start()
+    
+    
+    def exportPngWorker(
+            self,
+            svgFile,
+    ):
+        """Run the PNG conversion outside the UI thread."""
+    
+        try:
+            pngFile = exportPng(
+                svgFile,
+                scale=4.0,
+            )
+    
+        except Exception as error:
+            wx.CallAfter(
+                self.finishPngExport,
+                None,
+                error,
+            )
+    
+            return
+    
+        wx.CallAfter(
+            self.finishPngExport,
+            pngFile,
+            None,
+        )
+    
+    
+    def finishPngExport(
+            self,
+            pngFile,
+            error,
+    ):
+        """Update the UI after PNG export."""
+    
+        self.exportPngButton.Enable(
+            bool(self.params)
+        )
+    
+        if error is not None:
+            self.SetStatusText(
+                "PNG export failed."
+            )
+    
+            wx.MessageBox(
+                str(error),
+                "PNG Export Error",
+                wx.OK | wx.ICON_ERROR,
+                self,
+                )
+    
+            return
+    
+        self.SetStatusText(
+            f"PNG exported: {pngFile}"
+        )
+
+    def refreshExportControls(self):
+        """Enable export controls when a map exists."""
+
+        self.exportPngButton.Enable(
+            bool(self.params)
         )
