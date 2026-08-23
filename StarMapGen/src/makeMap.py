@@ -1416,15 +1416,25 @@ def createSystemTooltipText(system):
 
     lines = [
         system.name,
-        ", ".join(system.stars),
     ]
+
+    if system.faction:
+        lines.append(
+            f"Faction: {system.faction}"
+        )
+
+    lines.append(
+        f"Stars: {', '.join(system.stars)}"
+    )
 
     if system.planets:
         lines.append("")
 
         for planet in system.planets:
             lines.append(
-                f"{planet.name} — {planet.getTypeLabel()}"
+                f"{planet.name} — "
+                f"{planet.getTypeLabel()} — "
+                f"{planet.classification}"
             )
 
     return "\n".join(lines)

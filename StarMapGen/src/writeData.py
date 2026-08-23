@@ -117,7 +117,30 @@ def writePlanetData(
                 file.write(
                     f'Planet: "{system.name}" '
                     f'"{planet.name}" '
-                    f'"{planet.planetType}"\n'
+                    f'"{planet.planetType}" '
+                    f'"{planet.classification}"\n'
                 )
+
+        file.write("\n")
+
+def writeFactionData(
+        params,
+        systemList,
+):
+    """Append system factions to the DAT file."""
+
+    with open(
+            params["datafile"],
+            "a",
+            encoding="utf-8",
+    ) as file:
+        for system in systemList:
+            if not system.faction:
+                continue
+
+            file.write(
+                f'Faction: "{system.name}" '
+                f'"{system.faction}"\n'
+            )
 
         file.write("\n")

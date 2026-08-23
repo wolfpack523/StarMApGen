@@ -22,7 +22,7 @@ from writeData import (
     writeConnectionData,
     writeNebulaData,
     writePlanetData,
-    writeSystemData,
+    writeSystemData, writeFactionData,
 )
 from JumpLink import JumpLink
 from Nebula import Nebula
@@ -250,12 +250,34 @@ class PlanetDialog(wx.Dialog):
             wx.EXPAND,
         )
 
+        formSizer.Add(
+            wx.StaticText(
+                self,
+                label="Classification:",
+            ),
+            0,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        self.classificationChoice = wx.Choice(
+            self,
+            choices=list(
+                Planet.CLASSIFICATIONS
+            ),
+        )
+
+        formSizer.Add(
+            self.classificationChoice,
+            1,
+            wx.EXPAND,
+        )
+
         mainSizer.Add(
             formSizer,
             1,
             wx.ALL | wx.EXPAND,
             12,
-            )
+        )
 
         buttonSizer = self.CreateButtonSizer(
             wx.OK | wx.CANCEL
@@ -269,7 +291,7 @@ class PlanetDialog(wx.Dialog):
             | wx.BOTTOM
             | wx.EXPAND,
             12,
-            )
+        )
 
         self.SetSizerAndFit(
             mainSizer
@@ -286,8 +308,27 @@ class PlanetDialog(wx.Dialog):
                         planet.planetType
                     )
                 )
+
+            if (
+                    planet.classification
+                    in Planet.CLASSIFICATIONS
+            ):
+                self.classificationChoice.SetSelection(
+                    Planet.CLASSIFICATIONS.index(
+                        planet.classification
+                    )
+                )
+            else:
+                self.classificationChoice.SetStringSelection(
+                    Planet.DEFAULT_CLASSIFICATION
+                )
+
         else:
             self.typeChoice.SetSelection(0)
+
+            self.classificationChoice.SetStringSelection(
+                Planet.DEFAULT_CLASSIFICATION
+            )
 
         self.nameControl.SetFocus()
 
@@ -310,6 +351,20 @@ class PlanetDialog(wx.Dialog):
         return self.typeValues[
             selection
         ]
+
+    def getClassification(self):
+        selection = (
+            self.classificationChoice
+            .GetSelection()
+        )
+
+        if selection == wx.NOT_FOUND:
+            return Planet.DEFAULT_CLASSIFICATION
+
+        return Planet.CLASSIFICATIONS[
+            selection
+        ]
+
 
 class SMGFrame(wx.Frame):
     def __init__(self):
@@ -682,7 +737,7 @@ class SMGFrame(wx.Frame):
 
         filesSizer.Add(
             printZRow,
-           0,
+            0,
             wx.ALL | wx.EXPAND,
             5,
         )
@@ -1012,6 +1067,25 @@ class SMGFrame(wx.Frame):
         detailsSizer.Add(
             wx.StaticText(
                 parent,
+                label="Faction:",
+            ),
+            0,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        self.systemFaction = wx.TextCtrl(
+            parent
+        )
+
+        detailsSizer.Add(
+            self.systemFaction,
+            1,
+            wx.EXPAND,
+        )
+
+        detailsSizer.Add(
+            wx.StaticText(
+                parent,
                 label="X:",
             ),
             0,
@@ -1177,7 +1251,7 @@ class SMGFrame(wx.Frame):
             0,
             wx.LEFT | wx.RIGHT | wx.TOP,
             5,
-            )
+        )
 
         self.planetListControl = wx.ListCtrl(
             parent,
@@ -1199,6 +1273,12 @@ class SMGFrame(wx.Frame):
             1,
             "Type",
             width=120,
+        )
+
+        self.planetListControl.InsertColumn(
+            2,
+            "Classification",
+            width=160,
         )
 
         self.planetListControl.Bind(
@@ -1224,7 +1304,7 @@ class SMGFrame(wx.Frame):
             | wx.BOTTOM
             | wx.EXPAND,
             5,
-            )
+        )
 
         planetButtonSizer = wx.BoxSizer(
             wx.HORIZONTAL
@@ -2505,6 +2585,11 @@ class SMGFrame(wx.Frame):
             self.starList,
         )
 
+        writeFactionData(
+            self.params,
+            self.starList,
+        )
+
         writePlanetData(
             self.params,
             self.starList,
@@ -2588,6 +2673,9 @@ class SMGFrame(wx.Frame):
         self.selectedSystemIndex = index
 
         self.systemName.SetValue(system.name)
+        self.systemFaction.SetValue(
+            system.faction
+        )
         self.systemX.SetValue(str(system.x))
         self.systemY.SetValue(str(system.y))
         self.systemZ.SetValue(str(system.z))
@@ -2602,6 +2690,7 @@ class SMGFrame(wx.Frame):
             Planet(
                 name=planet.name,
                 planetType=planet.planetType,
+                classification=planet.classification,
             )
             for planet in system.planets
         ]
@@ -2710,6 +2799,7 @@ class SMGFrame(wx.Frame):
         self.systemName.SetValue(
             self.createUniqueSystemName()
         )
+        self.systemFaction.SetValue("")
 
         self.systemX.SetValue(
             str(
@@ -3027,6 +3117,17 @@ class SMGFrame(wx.Frame):
             selectedIndex,
         )
 
+        faction = (
+            self.systemFaction
+            .GetValue()
+            .strip()
+        )
+
+        if '"' in faction:
+            raise ValueError(
+                'The faction must not contain a double quote (").'
+        )
+
         x = self.parseCoordinate(
             self.systemX.GetValue(),
             "X",
@@ -3062,6 +3163,7 @@ class SMGFrame(wx.Frame):
                 Planet(
                     name=planet.name,
                     planetType=planet.planetType,
+                    classification=planet.classification,
                 )
                 for planet in self.editedPlanets
             ],
@@ -3091,6 +3193,7 @@ class SMGFrame(wx.Frame):
         """Copy validated editor values into a system."""
 
         system.name = values["name"]
+        system.faction = values["faction"]
 
         system.x = values["x"]
         system.y = values["y"]
@@ -3228,6 +3331,7 @@ class SMGFrame(wx.Frame):
         self.selectedSystemIndex = wx.NOT_FOUND
 
         self.systemName.SetValue("")
+        self.systemFaction.SetValue("")
         self.systemX.SetValue("")
         self.systemY.SetValue("")
         self.systemZ.SetValue("")
@@ -3959,85 +4063,83 @@ G2, M4, WD
 
     def onExportPng(self, event):
         """Export the current SVG map to PNG in a background thread."""
-    
+
         if not self.params:
             return
-    
+
         svgFile = self.params.get(
             "filename"
         )
-    
+
         if not svgFile:
             return
-    
+
         self.exportPngButton.Disable()
-    
+
         self.SetStatusText(
             "Exporting PNG..."
         )
-    
+
         thread = threading.Thread(
             target=self.exportPngWorker,
             args=(svgFile,),
             daemon=True,
         )
-    
+
         thread.start()
-    
-    
+
     def exportPngWorker(
             self,
             svgFile,
     ):
         """Run the PNG conversion outside the UI thread."""
-    
+
         try:
             pngFile = exportPng(
                 svgFile,
                 scale=4.0,
             )
-    
+
         except Exception as error:
             wx.CallAfter(
                 self.finishPngExport,
                 None,
                 error,
             )
-    
+
             return
-    
+
         wx.CallAfter(
             self.finishPngExport,
             pngFile,
             None,
         )
-    
-    
+
     def finishPngExport(
             self,
             pngFile,
             error,
     ):
         """Update the UI after PNG export."""
-    
+
         self.exportPngButton.Enable(
             bool(self.params)
         )
-    
+
         if error is not None:
             self.SetStatusText(
                 "PNG export failed."
             )
-    
+
             wx.MessageBox(
                 str(error),
                 "PNG Export Error",
                 wx.OK | wx.ICON_ERROR,
                 self,
-                )
-    
+            )
+
             return
-    
+
         self.SetStatusText(
             f"PNG exported: {pngFile}"
         )
@@ -4066,8 +4168,13 @@ G2, M4, WD
                 planet.getTypeLabel(),
             )
 
-        self.updatePlanetButtons()
+            self.planetListControl.SetItem(
+                row,
+                2,
+                planet.classification,
+            )
 
+        self.updatePlanetButtons()
 
     def onPlanetSelectionChanged(
             self,
@@ -4078,7 +4185,6 @@ G2, M4, WD
         self.updatePlanetButtons()
 
         event.Skip()
-
 
     def updatePlanetButtons(self):
         """Enable planet actions according to the selection."""
@@ -4099,7 +4205,6 @@ G2, M4, WD
         self.removePlanetButton.Enable(
             hasSelection
         )
-
 
     def validatePlanetName(
             self,
@@ -4164,7 +4269,14 @@ G2, M4, WD
                 Planet(
                     name=name,
                     planetType=dialog.getPlanetType(),
+                    classification=dialog.getClassification(),
                 )
+            )
+
+            self.applySystemButton.Enable()
+
+            self.SetStatusText(
+                "Planet list changed. Use Apply Changes to save."
             )
 
             self.refreshPlanetEditor()
@@ -4174,27 +4286,27 @@ G2, M4, WD
 
     def editPlanet(self, event):
         """Edit the selected planet."""
-    
+
         index = (
             self.planetListControl
             .GetFirstSelected()
         )
-    
+
         if index == -1:
             return
-    
+
         planet = self.editedPlanets[index]
-    
+
         dialog = PlanetDialog(
             self,
             planet=planet,
             title="Edit Planet",
         )
-    
+
         try:
             if dialog.ShowModal() != wx.ID_OK:
                 return
-    
+
             try:
                 name = self.validatePlanetName(
                     dialog.getPlanetName(),
@@ -4208,33 +4320,47 @@ G2, M4, WD
                     self,
                 )
                 return
-    
+
             planet.name = name
             planet.planetType = (
                 dialog.getPlanetType()
             )
-    
-            self.refreshPlanetEditor()
-    
+
+            planet.classification = (
+                dialog.getClassification()
+            )
+
+            self.applySystemButton.Enable()
+
+            self.SetStatusText(
+                "Planet list changed. Use Apply Changes to save."
+            )
+
             self.planetListControl.Select(
                 index
             )
-    
+            self.refreshPlanetEditor()
+
         finally:
             dialog.Destroy()
 
     def removePlanet(self, event):
         """Remove the selected planet from the editor."""
-    
+
         index = (
             self.planetListControl
             .GetFirstSelected()
         )
-    
+
         if index == -1:
             return
-    
+
         del self.editedPlanets[index]
-    
+
+        self.applySystemButton.Enable()
+
+        self.SetStatusText(
+            "Planet list changed. Use Apply Changes to save."
+        )
+
         self.refreshPlanetEditor()
-    
