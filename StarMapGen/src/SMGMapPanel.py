@@ -195,6 +195,38 @@ class SMGMapPanel(wx.Panel):
 
             white-space: pre-wrap;
         }
+        
+        #systemTooltip {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+        
+            min-width: 180px;
+            max-width: 320px;
+        
+            padding: 10px 12px;
+        
+            color: #ffffff;
+            background: rgba(12, 12, 18, 0.94);
+        
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            border-radius: 6px;
+        
+            box-shadow:
+                0 4px 16px rgba(0, 0, 0, 0.55);
+        
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+        
+            font-size: 13px;
+            line-height: 1.45;
+        
+            white-space: pre-line;
+        
+            pointer-events: none;
+        }
     </style>
 </head>
 
@@ -210,7 +242,7 @@ class SMGMapPanel(wx.Panel):
 <div id="zoomIndicator">
     100 %
 </div>
-
+<div id="systemTooltip"></div>
 <script>
     const scrollArea =
         document.getElementById(
@@ -235,6 +267,11 @@ class SMGMapPanel(wx.Panel):
     const errorMessage =
         document.getElementById(
             "errorMessage"
+        );
+        
+    const systemTooltip =
+        document.getElementById(
+            "systemTooltip"
         );
 
     let zoom = 1.0;
@@ -389,6 +426,117 @@ class SMGMapPanel(wx.Panel):
             errorMessage.style.display =
                 "block";
         };
+    
+    map.addEventListener(
+        "mousemove",
+        event => {
+            if (
+                systemTooltip.style.display
+                !== "block"
+            ) {
+                return;
+            }
+    
+            const offset = 14;
+    
+            let left =
+                event.clientX
+                + offset;
+    
+            let top =
+                event.clientY
+                + offset;
+    
+            const tooltipRect =
+                systemTooltip
+                .getBoundingClientRect();
+    
+            if (
+                left
+                + tooltipRect.width
+                > window.innerWidth
+            ) {
+                left =
+                    event.clientX
+                    - tooltipRect.width
+                    - offset;
+            }
+    
+            if (
+                top
+                + tooltipRect.height
+                > window.innerHeight
+            ) {
+                top =
+                    event.clientY
+                    - tooltipRect.height
+                    - offset;
+            }
+    
+            systemTooltip.style.left =
+                `${left}px`;
+    
+            systemTooltip.style.top =
+                `${top}px`;
+        }
+    );
+    
+    map.addEventListener(
+        "mouseout",
+        event => {
+            const system =
+                event.target.closest(
+                    ".star-system"
+                );                                                                                                      
+    
+            if (!system) {
+                return;
+            }
+    
+            const relatedSystem =
+                event.relatedTarget
+                ?.closest?.(
+                    ".star-system"
+                );
+    
+            if (
+                relatedSystem
+                === system
+            ) {
+                return;
+            }
+    
+            systemTooltip.style.display =
+                "none";
+        }
+    );
+            
+    map.addEventListener(
+        "mouseover",
+        event => {
+            const system =
+                event.target.closest(
+                    ".star-system"
+                );
+    
+            if (!system) {
+                return;
+            }
+    
+            const text =
+                system.dataset.tooltip;
+    
+            if (!text) {
+                return;
+            }
+    
+            systemTooltip.textContent =
+                text;
+    
+            systemTooltip.style.display =
+                "block";
+        }
+    );    
 
     scrollArea.addEventListener(
         "wheel",
