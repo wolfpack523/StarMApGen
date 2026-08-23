@@ -435,8 +435,16 @@ def createMapSymbols(
                 + tweakOffset[1]
         )
 
+        tooltipText = createSystemTooltipText(
+            system
+        )
+
         data = (
-                '<g transform="translate(%f,%f)">'
+                '<g '
+                'class="star-system" '
+                f'data-system-name="{escapeSvgAttribute(system.name)}" '
+                f'data-tooltip="{escapeSvgAttribute(tooltipText)}" '
+                'transform="translate(%f,%f)">'
                 % (
                     xPos * p2mm,
                     yPos * p2mm,
@@ -1402,3 +1410,21 @@ def writeAxisLabels(
     file.write(
         "</g>\n"
     )
+
+def createSystemTooltipText(system):
+    """Create the tooltip text stored on a star system SVG group."""
+
+    lines = [
+        system.name,
+        ", ".join(system.stars),
+    ]
+
+    if system.planets:
+        lines.append("")
+
+        for planet in system.planets:
+            lines.append(
+                f"{planet.name} — {planet.getTypeLabel()}"
+            )
+
+    return "\n".join(lines)
