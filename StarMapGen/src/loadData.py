@@ -3,6 +3,7 @@ import re
 from JumpLink import JumpLink
 from Nebula import Nebula
 from StarSystem import StarSystem
+from Planet import Planet
 
 SYSTEM_NAME_PATTERN = re.compile(
     r"^Name:\s*(.*)$"
@@ -14,6 +15,10 @@ COORDINATE_PATTERN = re.compile(
 
 STAR_COUNT_PATTERN = re.compile(
     r"^Number of Stars:\s*(\d+)$"
+)
+
+PLANET_PATTERN = re.compile(
+    r'^Planet:\s*"([^"]+)"\s+"([^"]+)"\s+"([^"]+)"\s*$'
 )
 
 SPECTRAL_TYPES_PATTERN = re.compile(
@@ -161,6 +166,59 @@ def loadData(
                         startName,
                         endName,
                         status,
+                    )
+                )
+
+                continue
+
+            planetMatch = PLANET_PATTERN.match(
+                line
+            )
+
+            if planetMatch:
+                systemName = (
+                    planetMatch.group(1).strip()
+                )
+
+                planetName = (
+                    planetMatch.group(2).strip()
+                )
+
+                planetType = (
+                    planetMatch.group(3)
+                    .strip()
+                    .lower()
+                )
+
+                system = next(
+                    (
+                        item
+                        for item in systemList
+                        if item.name == systemName
+                    ),
+                    None,
+                )
+
+                if system is None:
+                    print(
+                        f'Ignoring planet "{planetName}" because '
+                        f'system "{systemName}" does not exist.'
+                    )
+
+                    continue
+
+                if planetType not in Planet.VALID_TYPES:
+                    print(
+                        f'Unknown planet type "{planetType}" '
+                        f'for "{planetName}". Using "other".'
+                    )
+
+                    planetType = Planet.TYPE_OTHER
+
+                system.planets.append(
+                    Planet(
+                        name=planetName,
+                        planetType=planetType,
                     )
                 )
 

@@ -1,6 +1,5 @@
 from JumpLink import JumpLink
 
-
 def writeSystemData(params, systemList):
     """Write the map bounds and all star systems."""
 
@@ -101,3 +100,24 @@ def writeNebulaData(params, nebulaList):
             file.write(
                 f"Points: {points}\n\n"
             )
+
+def writePlanetData(
+        params,
+        systemList,
+):
+    """Append all planets to the DAT file."""
+
+    with open(
+            params["datafile"],
+            "a",
+            encoding="utf-8",
+    ) as file:
+        for system in systemList:
+            for planet in system.planets:
+                file.write(
+                    f'Planet: "{system.name}" '
+                    f'"{planet.name}" '
+                    f'"{planet.planetType}"\n'
+                )
+
+        file.write("\n")

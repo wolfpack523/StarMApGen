@@ -21,11 +21,13 @@ from StarSystem import StarSystem
 from writeData import (
     writeConnectionData,
     writeNebulaData,
+    writePlanetData,
     writeSystemData,
 )
 from JumpLink import JumpLink
 from Nebula import Nebula
 from exportPng import exportPng
+from Planet import Planet
 
 JUMP_STATUS_OPTIONS = [
     (
@@ -173,6 +175,142 @@ class JumpLinkDialog(wx.Dialog):
         return self.statusValues[selection]
 
 
+class PlanetDialog(wx.Dialog):
+    """Dialog for creating or editing a planet."""
+
+    def __init__(
+            self,
+            parent,
+            planet=None,
+            title="Planet",
+    ):
+        super().__init__(
+            parent,
+            title=title,
+        )
+
+        mainSizer = wx.BoxSizer(
+            wx.VERTICAL
+        )
+
+        formSizer = wx.FlexGridSizer(
+            cols=2,
+            vgap=8,
+            hgap=8,
+        )
+
+        formSizer.AddGrowableCol(
+            1,
+            1,
+        )
+
+        formSizer.Add(
+            wx.StaticText(
+                self,
+                label="Name:",
+            ),
+            0,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        self.nameControl = wx.TextCtrl(
+            self
+        )
+
+        formSizer.Add(
+            self.nameControl,
+            1,
+            wx.EXPAND,
+        )
+
+        formSizer.Add(
+            wx.StaticText(
+                self,
+                label="Type:",
+            ),
+            0,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        self.typeValues = list(
+            Planet.VALID_TYPES
+        )
+
+        self.typeChoice = wx.Choice(
+            self,
+            choices=[
+                Planet.TYPE_LABELS[value]
+                for value in self.typeValues
+            ],
+        )
+
+        formSizer.Add(
+            self.typeChoice,
+            1,
+            wx.EXPAND,
+        )
+
+        mainSizer.Add(
+            formSizer,
+            1,
+            wx.ALL | wx.EXPAND,
+            12,
+            )
+
+        buttonSizer = self.CreateButtonSizer(
+            wx.OK | wx.CANCEL
+        )
+
+        mainSizer.Add(
+            buttonSizer,
+            0,
+            wx.LEFT
+            | wx.RIGHT
+            | wx.BOTTOM
+            | wx.EXPAND,
+            12,
+            )
+
+        self.SetSizerAndFit(
+            mainSizer
+        )
+
+        if planet is not None:
+            self.nameControl.SetValue(
+                planet.name
+            )
+
+            if planet.planetType in self.typeValues:
+                self.typeChoice.SetSelection(
+                    self.typeValues.index(
+                        planet.planetType
+                    )
+                )
+        else:
+            self.typeChoice.SetSelection(0)
+
+        self.nameControl.SetFocus()
+
+    def getPlanetName(self):
+        return (
+            self.nameControl
+            .GetValue()
+            .strip()
+        )
+
+    def getPlanetType(self):
+        selection = (
+            self.typeChoice
+            .GetSelection()
+        )
+
+        if selection == wx.NOT_FOUND:
+            return Planet.TYPE_OTHER
+
+        return self.typeValues[
+            selection
+        ]
+
 class SMGFrame(wx.Frame):
     def __init__(self):
         super().__init__(
@@ -185,6 +323,7 @@ class SMGFrame(wx.Frame):
         # Current map state
         self.params = {}
         self.starList = []
+        self.editedPlanets = []
         self.jumpList = []
         self.nebulaList = []
 
@@ -1027,6 +1166,130 @@ class SMGFrame(wx.Frame):
             spectralHelpSizer,
             0,
             wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
+            5,
+        )
+
+        editorSizer.Add(
+            wx.StaticText(
+                parent,
+                label="Planets:",
+            ),
+            0,
+            wx.LEFT | wx.RIGHT | wx.TOP,
+            5,
+            )
+
+        self.planetListControl = wx.ListCtrl(
+            parent,
+            size=(-1, 120),
+            style=(
+                    wx.LC_REPORT
+                    | wx.LC_SINGLE_SEL
+                    | wx.BORDER_SUNKEN
+            ),
+        )
+
+        self.planetListControl.InsertColumn(
+            0,
+            "Planet",
+            width=190,
+        )
+
+        self.planetListControl.InsertColumn(
+            1,
+            "Type",
+            width=120,
+        )
+
+        self.planetListControl.Bind(
+            wx.EVT_LIST_ITEM_SELECTED,
+            self.onPlanetSelectionChanged,
+        )
+
+        self.planetListControl.Bind(
+            wx.EVT_LIST_ITEM_DESELECTED,
+            self.onPlanetSelectionChanged,
+        )
+
+        self.planetListControl.Bind(
+            wx.EVT_LIST_ITEM_ACTIVATED,
+            self.editPlanet,
+        )
+
+        editorSizer.Add(
+            self.planetListControl,
+            0,
+            wx.LEFT
+            | wx.RIGHT
+            | wx.BOTTOM
+            | wx.EXPAND,
+            5,
+            )
+
+        planetButtonSizer = wx.BoxSizer(
+            wx.HORIZONTAL
+        )
+
+        self.addPlanetButton = wx.Button(
+            parent,
+            label="Add Planet",
+        )
+
+        self.addPlanetButton.Bind(
+            wx.EVT_BUTTON,
+            self.addPlanet,
+        )
+
+        planetButtonSizer.Add(
+            self.addPlanetButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.editPlanetButton = wx.Button(
+            parent,
+            label="Edit Planet",
+        )
+
+        self.editPlanetButton.Bind(
+            wx.EVT_BUTTON,
+            self.editPlanet,
+        )
+
+        self.editPlanetButton.Disable()
+
+        planetButtonSizer.Add(
+            self.editPlanetButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.removePlanetButton = wx.Button(
+            parent,
+            label="Remove Planet",
+        )
+
+        self.removePlanetButton.Bind(
+            wx.EVT_BUTTON,
+            self.removePlanet,
+        )
+
+        self.removePlanetButton.Disable()
+
+        planetButtonSizer.Add(
+            self.removePlanetButton,
+            0,
+        )
+
+        editorSizer.Add(
+            planetButtonSizer,
+            0,
+            wx.LEFT
+            | wx.RIGHT
+            | wx.BOTTOM
+            | wx.ALIGN_RIGHT,
             5,
         )
 
@@ -2242,6 +2505,11 @@ class SMGFrame(wx.Frame):
             self.starList,
         )
 
+        writePlanetData(
+            self.params,
+            self.starList,
+        )
+
         writeConnectionData(
             self.params,
             self.jumpList,
@@ -2330,6 +2598,16 @@ class SMGFrame(wx.Frame):
             ", ".join(system.stars)
         )
 
+        self.editedPlanets = [
+            Planet(
+                name=planet.name,
+                planetType=planet.planetType,
+            )
+            for planet in system.planets
+        ]
+
+        self.refreshPlanetEditor()
+
         self.randomizeSpectralTypesButton.Enable()
 
         self.refreshJumpEditor(system.name)
@@ -2339,6 +2617,7 @@ class SMGFrame(wx.Frame):
         )
         self.applySystemButton.Enable()
         self.deleteSystemButton.Enable()
+        self.addPlanetButton.Enable()
 
     def refreshJumpEditor(self, systemName):
         """Display the jump links belonging to one system."""
@@ -2462,6 +2741,11 @@ class SMGFrame(wx.Frame):
         )
 
         self.randomizeSpectralTypesButton.Enable()
+
+        self.editedPlanets = []
+
+        self.refreshPlanetEditor()
+        self.addPlanetButton.Enable()
 
         # A new system may be linked to any existing system.
         self.refreshJumpEditor(None)
@@ -2593,7 +2877,7 @@ class SMGFrame(wx.Frame):
             self.clearSystemDetails()
 
         self.SetStatusText(
-            "New star system creation canpointed."
+            "New star system creation cancelled."
         )
 
     def leaveCreateMode(self):
@@ -2774,6 +3058,13 @@ class SMGFrame(wx.Frame):
             "y": y,
             "z": z,
             "stars": spectralTypes,
+            "planets": [
+                Planet(
+                    name=planet.name,
+                    planetType=planet.planetType,
+                )
+                for planet in self.editedPlanets
+            ],
         }
 
     def hasCurrentMapBounds(self):
@@ -2812,6 +3103,7 @@ class SMGFrame(wx.Frame):
 
         system.stars = values["stars"]
         system.nStars = len(system.stars)
+        system.planets = values["planets"]
 
     def validateSystemName(
             self,
@@ -2950,6 +3242,12 @@ class SMGFrame(wx.Frame):
         self.addJumpButton.Disable()
         self.editJumpButton.Disable()
         self.removeJumpButton.Disable()
+        self.editedPlanets = []
+
+        self.planetListControl.DeleteAllItems()
+        self.addPlanetButton.Disable()
+        self.editPlanetButton.Disable()
+        self.removePlanetButton.Disable()
 
         self.cancelSystemButton.Disable()
         self.applySystemButton.Disable()
@@ -3750,3 +4048,193 @@ G2, M4, WD
         self.exportPngButton.Enable(
             bool(self.params)
         )
+
+    def refreshPlanetEditor(self):
+        """Refresh the temporary planet list."""
+
+        self.planetListControl.DeleteAllItems()
+
+        for planet in self.editedPlanets:
+            row = self.planetListControl.InsertItem(
+                self.planetListControl.GetItemCount(),
+                planet.name,
+            )
+
+            self.planetListControl.SetItem(
+                row,
+                1,
+                planet.getTypeLabel(),
+            )
+
+        self.updatePlanetButtons()
+
+
+    def onPlanetSelectionChanged(
+            self,
+            event,
+    ):
+        """Update planet buttons after selecting a row."""
+
+        self.updatePlanetButtons()
+
+        event.Skip()
+
+
+    def updatePlanetButtons(self):
+        """Enable planet actions according to the selection."""
+
+        selectedIndex = (
+            self.planetListControl
+            .GetFirstSelected()
+        )
+
+        hasSelection = (
+                selectedIndex != -1
+        )
+
+        self.editPlanetButton.Enable(
+            hasSelection
+        )
+
+        self.removePlanetButton.Enable(
+            hasSelection
+        )
+
+
+    def validatePlanetName(
+            self,
+            name,
+            ignoredIndex=-1,
+    ):
+        """Validate a planet name inside the current system."""
+
+        name = name.strip()
+
+        if not name:
+            raise ValueError(
+                "The planet name must not be empty."
+            )
+
+        if '"' in name:
+            raise ValueError(
+                'The planet name must not contain a double quote (").'
+            )
+
+        for index, planet in enumerate(
+                self.editedPlanets
+        ):
+            if (
+                    index != ignoredIndex
+                    and planet.name.casefold()
+                    == name.casefold()
+            ):
+                raise ValueError(
+                    f'A planet named "{name}" already exists '
+                    "in this system."
+                )
+
+        return name
+
+    def addPlanet(self, event):
+        """Add a planet to the current editor state."""
+
+        dialog = PlanetDialog(
+            self,
+            title="Add Planet",
+        )
+
+        try:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+
+            try:
+                name = self.validatePlanetName(
+                    dialog.getPlanetName()
+                )
+            except ValueError as error:
+                wx.MessageBox(
+                    str(error),
+                    "Invalid Planet",
+                    wx.OK | wx.ICON_ERROR,
+                    self,
+                )
+                return
+
+            self.editedPlanets.append(
+                Planet(
+                    name=name,
+                    planetType=dialog.getPlanetType(),
+                )
+            )
+
+            self.refreshPlanetEditor()
+
+        finally:
+            dialog.Destroy()
+
+    def editPlanet(self, event):
+        """Edit the selected planet."""
+    
+        index = (
+            self.planetListControl
+            .GetFirstSelected()
+        )
+    
+        if index == -1:
+            return
+    
+        planet = self.editedPlanets[index]
+    
+        dialog = PlanetDialog(
+            self,
+            planet=planet,
+            title="Edit Planet",
+        )
+    
+        try:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+    
+            try:
+                name = self.validatePlanetName(
+                    dialog.getPlanetName(),
+                    ignoredIndex=index,
+                )
+            except ValueError as error:
+                wx.MessageBox(
+                    str(error),
+                    "Invalid Planet",
+                    wx.OK | wx.ICON_ERROR,
+                    self,
+                )
+                return
+    
+            planet.name = name
+            planet.planetType = (
+                dialog.getPlanetType()
+            )
+    
+            self.refreshPlanetEditor()
+    
+            self.planetListControl.Select(
+                index
+            )
+    
+        finally:
+            dialog.Destroy()
+
+    def removePlanet(self, event):
+        """Remove the selected planet from the editor."""
+    
+        index = (
+            self.planetListControl
+            .GetFirstSelected()
+        )
+    
+        if index == -1:
+            return
+    
+        del self.editedPlanets[index]
+    
+        self.refreshPlanetEditor()
+    
