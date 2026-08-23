@@ -1,4 +1,5 @@
 import re
+import random
 
 import wx
 import wx.lib.intctrl
@@ -955,6 +956,25 @@ class SMGFrame(wx.Frame):
             wx.ALIGN_CENTER_VERTICAL,
         )
 
+        self.randomizeSpectralTypesButton = wx.Button(
+            parent,
+            label="Randomize",
+        )
+
+        self.randomizeSpectralTypesButton.Bind(
+            wx.EVT_BUTTON,
+            self.randomizeSpectralTypes,
+        )
+
+        self.randomizeSpectralTypesButton.Disable()
+
+        spectralHelpSizer.Add(
+            self.randomizeSpectralTypesButton,
+            0,
+            wx.LEFT,
+            5,
+        )
+
         spectralHelpButton = wx.Button(
             parent,
             label="Spectral Type Help",
@@ -1365,6 +1385,8 @@ class SMGFrame(wx.Frame):
             ", ".join(system.stars)
         )
 
+        self.randomizeSpectralTypesButton.Enable()
+        
         self.refreshJumpEditor(system.name)
 
         self.applySystemButton.SetLabel(
@@ -1485,15 +1507,16 @@ class SMGFrame(wx.Frame):
 
         self.systemZ.SetValue(
             str(
-                min(
-                    max(0, self.params["minZ"]),
-                    self.params["maxZ"],
-                )
+                self.createRandomZCoordinate()
             )
         )
 
         self.systemStarCount.SetValue("1")
-        self.systemSpectralTypes.SetValue("G2")
+        self.systemSpectralTypes.SetValue(
+            self.createRandomSpectralType()
+        )
+
+        self.randomizeSpectralTypesButton.Enable()
 
         # A new system may be linked to any existing system.
         self.refreshJumpEditor(None)
@@ -1503,6 +1526,106 @@ class SMGFrame(wx.Frame):
 
         self.SetStatusText(
             "Enter the values for the new star system."
+        )
+
+    def createRandomSpectralType(self):
+        """Create a random main-sequence spectral type."""
+
+        spectral_class = random.choices(
+            population=[
+                "O",
+                "B",
+                "A",
+                "F",
+                "G",
+                "K",
+                "M",
+            ],
+            weights=[
+                1,
+                3,
+                6,
+                10,
+                15,
+                25,
+                40,
+            ],
+            k=1,
+        )[0]
+
+        spectral_subclass = random.randint(
+            0,
+            9,
+        )
+
+        return (
+            f"{spectral_class}"
+            f"{spectral_subclass}"
+        )
+
+    def randomizeSpectralTypes(self, event):
+        """Randomize the spectral types currently shown in the editor."""
+
+        currentValue = (
+            self.systemSpectralTypes
+            .GetValue()
+        )
+
+        currentTypes = [
+            item
+            for item in re.split(
+                r"[,;\r\n]+",
+                currentValue,
+            )
+            if item.strip()
+        ]
+
+        starCount = max(
+            1,
+            len(currentTypes),
+        )
+
+        spectralTypes = [
+            self.createRandomSpectralType()
+            for _ in range(starCount)
+        ]
+
+        self.systemSpectralTypes.SetValue(
+            ", ".join(spectralTypes)
+        )
+
+        self.systemStarCount.SetValue(
+            str(starCount)
+        )
+
+        self.SetStatusText(
+            "Random spectral types generated. "
+            "Use Apply Changes to save them."
+        )
+
+    def createRandomZCoordinate(self):
+        """Create a random Z coordinate between -10 and +10."""
+
+        minimum = max(
+            -10,
+            self.params["minZ"],
+        )
+
+        maximum = min(
+            10,
+            self.params["maxZ"],
+        )
+
+        if minimum <= maximum:
+            return random.randint(
+                minimum,
+                maximum,
+            )
+
+        # The current map does not overlap the preferred -10..+10 range.
+        return random.randint(
+            self.params["minZ"],
+            self.params["maxZ"],
         )
 
     def cancelNewSystem(self, event):
@@ -1873,6 +1996,7 @@ class SMGFrame(wx.Frame):
         self.systemZ.SetValue("")
         self.systemStarCount.SetValue("")
         self.systemSpectralTypes.SetValue("")
+        self.randomizeSpectralTypesButton.Disable()
 
         self.displayedJumpLinks = []
         self.jumpListControl.DeleteAllItems()
