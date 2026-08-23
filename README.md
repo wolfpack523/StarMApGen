@@ -12,22 +12,21 @@ daraus eine frei skalierbare SVG-Karte.
 - Vorhandene Karten aus einer `.dat`-Datei laden
 - Kartengrenzen in alle sechs Richtungen erweitern
 - Sternensysteme hinzufügen, bearbeiten und löschen
+- Fraktionen für Sternensysteme hinterlegen
 - Mehrfachsternsysteme darstellen
 - Verschiedene Stern- und Objekttypen darstellen
+- Planeten zu Sternensystemen hinzufügen, bearbeiten und entfernen
+- Planetentypen und Weltklassifizierungen verwalten
 - Sprungverbindungen hinzufügen, bearbeiten und entfernen
 - Unterschiedliche Zustände für Sprungverbindungen anzeigen
-- Systemnamen und Koordinaten als bearbeitbaren SVG-Text ausgeben
-- SVG-Karte direkt im Programm anzeigen
-- DAT- und SVG-Datei nach Änderungen automatisch aktualisieren
 - Nebelregionen hinzufügen, bearbeiten und löschen
 - Nebel als Cloud, Haze oder Outline darstellen
 - Nebel über frei definierbare Stützpunkte formen
 - X- und Y-Koordinaten direkt an der Karte anzeigen
+- Systeminformationen inklusive Planeten per Hover anzeigen
+- SVG-Karte direkt im Programm anzeigen
 - Karten zusätzlich als PNG exportieren
-
-## Was ist neu?
-
-Diese Version erweitert StarMapGen deutlich um Funktionen zum Bearbeiten bestehender Sternkarten.
+- DAT- und SVG-Datei nach Änderungen automatisch aktualisieren
 
 ## Was ist neu?
 
@@ -37,6 +36,10 @@ Diese Version erweitert StarMapGen deutlich um Funktionen zum Bearbeiten bestehe
 - Karten können zusätzlich als PNG exportiert werden.
 - Für Sprungverbindungen steht jetzt der zusätzliche Status **Lost** zur Verfügung.
 - Spektraltypen können im Systemeditor zufällig neu erzeugt werden.
+- Sternensystemen kann jetzt eine Fraktion zugewiesen werden.
+- Sternensysteme können Planeten enthalten.
+- Planeten besitzen einen Planetentyp und eine Weltklassifizierung.
+- Systeminformationen und Planeten werden in der SVG-Ansicht beim Überfahren eines Systems angezeigt.
 - Die Kartenansicht wurde verbessert: Zoomen und Scrollposition bleiben beim Aktualisieren der SVG-Karte erhalten.
 
 Außerdem wurden zahlreiche kleinere Verbesserungen an der SVG-Erzeugung, Datenverarbeitung und Benutzeroberfläche vorgenommen.
@@ -69,7 +72,6 @@ Voraussetzungen:
 Abhängigkeiten installieren:
 
 ```text
-python -m pip install wxPython
 python -m pip install wxPython resvg-py
 ```
 
@@ -167,6 +169,10 @@ Beim Laden werden folgende Daten übernommen:
 - Sternensysteme
 - Systempositionen
 - Spektraltypen
+- Fraktionen
+- Planeten
+- Planetentypen
+- Weltklassifizierungen
 - Sprungverbindungen
 - Zustände der Sprungverbindungen
 - Nebelregionen
@@ -277,10 +283,12 @@ aufgelistet.
 Nach Auswahl eines Systems können folgende Werte bearbeitet werden:
 
 - Name
+- Fraktion
 - X-Koordinate
 - Y-Koordinate
 - Z-Koordinate
 - Spektraltypen
+- Planeten
 
 Änderungen werden mit
 
@@ -408,6 +416,99 @@ Verfügbare Zustände:
 Eine Verbindung wird nur einmal gespeichert, gilt aber für beide
 beteiligten Systeme.
 
+
+## Planeten
+
+Zu jedem Sternensystem können beliebig viele Planeten hinzugefügt werden.
+
+Ein Planet besitzt derzeit folgende Eigenschaften:
+
+- Name
+- Typ
+- Klassifizierung
+
+### Planet hinzufügen
+
+Das gewünschte Sternensystem auswählen und anschließend auf ```Add Planet```
+klicken.
+
+Im Dialog können Name, Planetentyp und Klassifizierung ausgewählt werden.
+
+Die Änderungen am Planetensystem werden erst mit ```Apply Changes``` dauerhaft übernommen.
+
+#### Planetentypen
+
+Folgende Planetentypen stehen zur Verfügung:
+
+- Terran
+- Karge bzw. lebensarme Welt
+- Gasriese
+- Eiswelt
+- Ozeanwelt
+- Wüstenwelt
+- Vulkanische Welt
+- Sonstiger Planetentyp
+
+#Weltklassifizierungen
+
+Zusätzlich zum physikalischen Planetentyp kann eine Weltklassifizierung vergeben werden.
+
+Verfügbare Klassifizierungen:
+
+- Agrarwelt
+- Bergwerksplanet
+- Bibliothekswelt
+- Dschungelplanet
+- Eiswelt
+- Fabrikwelt
+- Festungswelt
+- Feudalwelt
+- Forschungsstation
+- Gartenwelt
+- Grenzwelt
+- Höhlenwelt
+- Industriewelt
+- Leblose Welt
+- Makropolwelt
+- Munitorumswelt
+- Nachtwelt
+- Ordenswelt
+- Ozeanwelt
+- Ritterwelt
+- Schreinwelt
+- Todeswelt
+- Trophäenwelt
+- Urzeitwelt
+- Waldplanet
+- Wüstenplanet
+- Zivilisierte Welt
+- Dämonenwelt
+- Exoditenwelt
+- Gasriese
+- Gruftwelt
+- Hexenwelt
+- Jungfernwelt
+- Orkwelten
+- Tauwelten
+- Weltenschiff
+- Sonstige Welt
+
+
+## Systeminformationen in der SVG-Ansicht
+
+Sternensysteme können zusätzliche Informationen enthalten.
+
+Wird der Mauszeiger über ein Sternensystem bewegt, zeigt die Kartenansicht einen Tooltip mit:
+
+- Systemname
+- Fraktion
+- Spektraltypen
+- Planeten
+- Planetentypen
+- Weltklassifizierungen
+
+Die Tooltip-Daten werden direkt aus den gespeicherten Kartendaten erzeugt.
+
 ## Nebelregionen
 
 
@@ -461,7 +562,7 @@ Folgende Darstellungsarten stehen zur Verfügung:
 |Haze|Transparentere und stärker geglättete Nebelregion mit breiterem Rand|
 |Outline|Zeigt nur die äußere Kontur des Nebels|
 
-####Farbe
+#### Farbe
 
 Die Farbe wird als hexadezimaler RGB-Wert angegeben.
 
@@ -499,12 +600,7 @@ Ein Nebel benötigt mindestens drei unterschiedliche Punkte.
 Die Stützpunkte werden nicht automatisch sortiert. Ihre Reihenfolge ist
 wichtig, da sie die Kontur des Nebels festlegt.
 
-Änderungen werden mit
-
-```text
-Apply Changes
-```
-
+Änderungen werden mit ```Apply Changes``` dauerhaft
 übernommen und anschließend sowohl in der DAT-Datei als auch in der
 SVG-Karte gespeichert.
 
@@ -527,6 +623,8 @@ manuelle Änderungen sollte vorher eine Sicherungskopie erstellt werden.
 Nach Änderungen an
 
 - Sternensystemen,
+- Fraktionen,
+- Planeten,
 - Sprungverbindungen,
 - Nebelregionen oder
 - Kartengrenzen
@@ -535,6 +633,27 @@ werden die DAT-Datei und die SVG-Karte automatisch neu geschrieben.
 
 Vor umfangreichen Änderungen empfiehlt sich trotzdem eine Sicherungskopie
 der DAT-Datei.
+
+Zusätzlich zu Sternensystemen, Sprungverbindungen und Nebeln können
+Fraktionen und Planeten gespeichert werden.
+
+Beispiel:
+
+```text
+Name: Sol
+Coordinates: (4,5,0)
+Number of Stars: 1
+Spectral Types: G2
+
+Faction: "Sol" "Imperium"
+
+Planet: "Sol" "Terra" "terran" "Zivilisierte Welt"
+Planet: "Sol" "Mars" "barren" "Bergwerksplanet"
+
+Link: "Sol" "Alpha Centauri" "normal"
+```
+
+Ältere DAT-Dateien ohne Fraktions- oder Planetendaten können weiterhin geladen werden.
 
 ### SVG-Datei weiterbearbeiten
 
@@ -593,6 +712,7 @@ StarMapGen/
 │       ├── StarSystem.py
 │       ├── JumpLink.py
 │       ├── Nebula.py
+│       ├── Planet.py
 │       ├── exportPng.py
 │       ├── loadData.py
 │       ├── writeData.py
