@@ -187,6 +187,10 @@ class SMGFrame(wx.Frame):
         self.isCreatingSystem = False
         self.creationReturnIndex = wx.NOT_FOUND
 
+        self.selectedNebulaIndex = wx.NOT_FOUND
+        self.isCreatingNebula = False
+        self.nebulaCreationReturnIndex = wx.NOT_FOUND
+
         self.Center()
 
         mainPanel = wx.Panel(self)
@@ -217,6 +221,11 @@ class SMGFrame(wx.Frame):
         )
 
         self.createSystemEditor(
+            self.inputPanel,
+            inputSizer,
+        )
+
+        self.createNebulaEditor(
             self.inputPanel,
             inputSizer,
         )
@@ -1224,6 +1233,911 @@ class SMGFrame(wx.Frame):
             5,
         )
 
+    def createNebulaEditor(
+            self,
+            parent,
+            inputSizer,
+    ):
+        """Create the nebula editor."""
+
+        (
+            self.nebulaPane,
+            nebulaParent,
+            nebulaSizer,
+        ) = self.createCollapsibleSection(
+            parent,
+            inputSizer,
+            "Nebulae",
+            expanded=False,
+        )
+
+        self.nebulaListControl = wx.ListBox(
+            nebulaParent,
+            size=(340, 110),
+            style=wx.LB_SINGLE,
+        )
+
+        self.nebulaListControl.Bind(
+            wx.EVT_LISTBOX,
+            self.onNebulaSelected,
+        )
+
+        nebulaSizer.Add(
+            self.nebulaListControl,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+            )
+
+        detailsSizer = wx.FlexGridSizer(
+            cols=2,
+            vgap=5,
+            hgap=5,
+        )
+
+        detailsSizer.AddGrowableCol(
+            1,
+            1,
+        )
+
+        # ------------------------------------------------------------
+        # Name
+        # ------------------------------------------------------------
+
+        detailsSizer.Add(
+            wx.StaticText(
+                nebulaParent,
+                label="Name:",
+            ),
+            0,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        self.nebulaName = wx.TextCtrl(
+            nebulaParent
+        )
+
+        detailsSizer.Add(
+            self.nebulaName,
+            1,
+            wx.EXPAND,
+        )
+
+        # ------------------------------------------------------------
+        # Style
+        # ------------------------------------------------------------
+
+        detailsSizer.Add(
+            wx.StaticText(
+                nebulaParent,
+                label="Style:",
+            ),
+            0,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        self.nebulaStyleValues = [
+            Nebula.STYLE_CLOUD,
+            Nebula.STYLE_OUTLINE,
+            Nebula.STYLE_HAZE,
+        ]
+
+        self.nebulaStyle = wx.Choice(
+            nebulaParent,
+            choices=[
+                "Cloud",
+                "Outline",
+                "Haze",
+            ],
+        )
+
+        self.nebulaStyle.SetSelection(0)
+
+        detailsSizer.Add(
+            self.nebulaStyle,
+            1,
+            wx.EXPAND,
+        )
+
+        # ------------------------------------------------------------
+        # Color
+        # ------------------------------------------------------------
+
+        detailsSizer.Add(
+            wx.StaticText(
+                nebulaParent,
+                label="Color:",
+            ),
+            0,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        self.nebulaColor = wx.TextCtrl(
+            nebulaParent
+        )
+
+        detailsSizer.Add(
+            self.nebulaColor,
+            1,
+            wx.EXPAND,
+        )
+
+        # ------------------------------------------------------------
+        # Opacity
+        # ------------------------------------------------------------
+
+        detailsSizer.Add(
+            wx.StaticText(
+                nebulaParent,
+                label="Opacity:",
+            ),
+            0,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        self.nebulaOpacity = NumCtrl(
+            nebulaParent,
+            min=0.0,
+            max=1.0,
+            fractionWidth=2,
+        )
+
+        detailsSizer.Add(
+            self.nebulaOpacity,
+            1,
+            wx.EXPAND,
+        )
+
+        nebulaSizer.Add(
+            detailsSizer,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+            )
+
+        # ------------------------------------------------------------
+        # Cells
+        # ------------------------------------------------------------
+
+        nebulaSizer.Add(
+            wx.StaticText(
+                nebulaParent,
+                label="Cells:",
+            ),
+            0,
+            wx.LEFT | wx.RIGHT | wx.TOP,
+            5,
+            )
+
+        self.nebulaCells = wx.TextCtrl(
+            nebulaParent,
+            size=(-1, 100),
+            style=wx.TE_MULTILINE,
+        )
+
+        nebulaSizer.Add(
+            self.nebulaCells,
+            0,
+            wx.LEFT | wx.RIGHT | wx.EXPAND,
+            5,
+            )
+
+        cellHint = wx.StaticText(
+            nebulaParent,
+            label=(
+                "Enter one map cell per line as x,y. "
+                "Example: 4,5"
+            ),
+        )
+
+        cellHint.Wrap(330)
+
+        nebulaSizer.Add(
+            cellHint,
+            0,
+            wx.ALL | wx.EXPAND,
+            5,
+            )
+
+        # ------------------------------------------------------------
+        # Buttons
+        # ------------------------------------------------------------
+
+        buttonSizer = wx.BoxSizer(
+            wx.HORIZONTAL
+        )
+
+        self.newNebulaButton = wx.Button(
+            nebulaParent,
+            label="New Nebula",
+        )
+
+        self.newNebulaButton.Bind(
+            wx.EVT_BUTTON,
+            self.beginNewNebula,
+        )
+
+        self.newNebulaButton.Disable()
+
+        buttonSizer.Add(
+            self.newNebulaButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.deleteNebulaButton = wx.Button(
+            nebulaParent,
+            label="Delete Nebula",
+        )
+
+        self.deleteNebulaButton.Bind(
+            wx.EVT_BUTTON,
+            self.deleteSelectedNebula,
+        )
+
+        self.deleteNebulaButton.Disable()
+
+        buttonSizer.Add(
+            self.deleteNebulaButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.cancelNebulaButton = wx.Button(
+            nebulaParent,
+            label="Cancel",
+        )
+
+        self.cancelNebulaButton.Bind(
+            wx.EVT_BUTTON,
+            self.cancelNewNebula,
+        )
+
+        self.cancelNebulaButton.Disable()
+
+        buttonSizer.Add(
+            self.cancelNebulaButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.applyNebulaButton = wx.Button(
+            nebulaParent,
+            label="Apply Changes",
+        )
+
+        self.applyNebulaButton.Bind(
+            wx.EVT_BUTTON,
+            self.applyNebulaChanges,
+        )
+
+        self.applyNebulaButton.Disable()
+
+        buttonSizer.Add(
+            self.applyNebulaButton,
+            0,
+        )
+
+        nebulaSizer.Add(
+            buttonSizer,
+            0,
+            wx.ALL | wx.ALIGN_RIGHT,
+            5,
+            )
+
+        self.clearNebulaDetails()
+
+
+    def refreshNebulaEditor(
+            self,
+            selectedIndex=0,
+    ):
+        """Refresh the nebula list."""
+
+        self.nebulaListControl.Freeze()
+
+        try:
+            self.nebulaListControl.Clear()
+
+            for nebula in self.nebulaList:
+                self.nebulaListControl.Append(
+                    f"{nebula.name} "
+                    f"({len(nebula.cells)} cells)"
+                )
+
+        finally:
+            self.nebulaListControl.Thaw()
+
+        self.newNebulaButton.Enable(
+            bool(self.params)
+        )
+
+        if self.nebulaList:
+            selectedIndex = max(
+                0,
+                min(
+                    selectedIndex,
+                    len(self.nebulaList) - 1,
+                    ),
+            )
+
+            self.nebulaListControl.SetSelection(
+                selectedIndex
+            )
+
+            self.showNebulaDetails(
+                selectedIndex
+            )
+
+        else:
+            self.clearNebulaDetails()
+
+        self.refreshInputPanelLayout()
+
+    def onNebulaSelected(self, event):
+        """Display the selected nebula."""
+
+        if self.isCreatingNebula:
+            return
+
+        self.showNebulaDetails(
+            event.GetSelection()
+        )
+
+    def showNebulaDetails(self, index):
+        """Load a nebula into the editor."""
+
+        if (
+                index == wx.NOT_FOUND
+                or not 0 <= index < len(self.nebulaList)
+        ):
+            self.clearNebulaDetails()
+            return
+
+        self.leaveNebulaCreateMode()
+
+        nebula = self.nebulaList[index]
+
+        self.selectedNebulaIndex = index
+
+        self.nebulaName.SetValue(
+            nebula.name
+        )
+
+        if nebula.style in self.nebulaStyleValues:
+            self.nebulaStyle.SetSelection(
+                self.nebulaStyleValues.index(
+                    nebula.style
+                )
+            )
+        else:
+            self.nebulaStyle.SetSelection(0)
+
+        self.nebulaColor.SetValue(
+            nebula.color
+        )
+
+        self.nebulaOpacity.SetValue(
+            nebula.opacity
+        )
+
+        self.nebulaCells.SetValue(
+            "\n".join(
+                f"{x},{y}"
+                for x, y in nebula.cells
+            )
+        )
+
+        self.applyNebulaButton.SetLabel(
+            "Apply Changes"
+        )
+
+        self.applyNebulaButton.Enable()
+        self.deleteNebulaButton.Enable()
+
+    def beginNewNebula(self, event):
+        """Switch the nebula editor into creation mode."""
+
+        if not self.params:
+            wx.MessageBox(
+                "Generate or load a map before adding a nebula.",
+                "No map available",
+                wx.OK | wx.ICON_INFORMATION,
+                )
+            return
+
+        self.nebulaCreationReturnIndex = (
+            self.nebulaListControl.GetSelection()
+        )
+
+        currentSelection = (
+            self.nebulaListControl.GetSelection()
+        )
+
+        if currentSelection != wx.NOT_FOUND:
+            self.nebulaListControl.Deselect(
+                currentSelection
+            )
+
+        self.isCreatingNebula = True
+        self.selectedNebulaIndex = wx.NOT_FOUND
+
+        self.nebulaListControl.Disable()
+        self.newNebulaButton.Disable()
+        self.deleteNebulaButton.Disable()
+
+        self.cancelNebulaButton.Enable()
+
+        self.applyNebulaButton.SetLabel(
+            "Create Nebula"
+        )
+
+        self.applyNebulaButton.Enable()
+
+        self.nebulaName.SetValue(
+            self.createUniqueNebulaName()
+        )
+
+        self.nebulaStyle.SetSelection(0)
+
+        self.nebulaColor.SetValue(
+            "#7a2f8f"
+        )
+
+        self.nebulaOpacity.SetValue(
+            0.35
+        )
+
+        self.nebulaCells.SetValue("")
+
+        self.nebulaName.SetFocus()
+        self.nebulaName.SelectAll()
+
+        self.SetStatusText(
+            "Enter the values for the new nebula."
+        )
+
+    def createUniqueNebulaName(self):
+        """Create a unique default nebula name."""
+
+        existingNames = {
+            nebula.name.casefold()
+            for nebula in self.nebulaList
+        }
+
+        baseName = "Nebula"
+
+        if baseName.casefold() not in existingNames:
+            return baseName
+
+        number = 2
+
+        while (
+                f"{baseName} {number}".casefold()
+                in existingNames
+        ):
+            number += 1
+
+        return f"{baseName} {number}"
+
+    def cancelNewNebula(self, event):
+        """Cancel creation of a nebula."""
+
+        returnIndex = (
+            self.nebulaCreationReturnIndex
+        )
+
+        self.leaveNebulaCreateMode()
+
+        if self.nebulaList:
+            if (
+                    returnIndex == wx.NOT_FOUND
+                    or returnIndex >= len(self.nebulaList)
+            ):
+                returnIndex = 0
+
+            self.nebulaListControl.SetSelection(
+                returnIndex
+            )
+
+            self.showNebulaDetails(
+                returnIndex
+            )
+
+        else:
+            self.clearNebulaDetails()
+
+        self.SetStatusText(
+            "Nebula creation cancelled."
+        )
+
+    def leaveNebulaCreateMode(self):
+        """Restore the normal nebula editor controls."""
+
+        self.isCreatingNebula = False
+        self.nebulaCreationReturnIndex = (
+            wx.NOT_FOUND
+        )
+
+        self.nebulaListControl.Enable()
+
+        self.newNebulaButton.Enable(
+            bool(self.params)
+        )
+
+        self.cancelNebulaButton.Disable()
+
+        self.applyNebulaButton.SetLabel(
+            "Apply Changes"
+        )
+
+    def readNebulaEditorValues(
+            self,
+            selectedIndex,
+    ):
+        """Validate and return the nebula editor values."""
+
+        name = self.validateNebulaName(
+            self.nebulaName.GetValue(),
+            selectedIndex,
+        )
+
+        styleSelection = (
+            self.nebulaStyle.GetSelection()
+        )
+
+        if styleSelection == wx.NOT_FOUND:
+            raise ValueError(
+                "Select a nebula style."
+            )
+
+        style = self.nebulaStyleValues[
+            styleSelection
+        ]
+
+        color = self.parseNebulaColor(
+            self.nebulaColor.GetValue()
+        )
+
+        opacity = float(
+            self.nebulaOpacity.GetValue()
+        )
+
+        if not 0.0 <= opacity <= 1.0:
+            raise ValueError(
+                "Opacity must be between 0 and 1."
+            )
+
+        cells = self.parseNebulaCells(
+            self.nebulaCells.GetValue()
+        )
+
+        return {
+            "name": name,
+            "style": style,
+            "color": color,
+            "opacity": opacity,
+            "cells": cells,
+        }
+
+    def validateNebulaName(
+            self,
+            value,
+            selectedIndex=wx.NOT_FOUND,
+    ):
+        """Validate a nebula name."""
+
+        name = value.strip()
+
+        if not name:
+            raise ValueError(
+                "The nebula name must not be empty."
+            )
+
+        if '"' in name:
+            raise ValueError(
+                'The nebula name must not contain a double quote (").'
+            )
+
+        for index, nebula in enumerate(
+                self.nebulaList
+        ):
+            if (
+                    index != selectedIndex
+                    and nebula.name.casefold()
+                    == name.casefold()
+            ):
+                raise ValueError(
+                    f'A nebula named "{name}" already exists.'
+                )
+
+        return name
+
+
+    def parseNebulaColor(self, value):
+        """Validate an SVG hexadecimal colour."""
+
+        color = value.strip()
+
+        if re.fullmatch(
+                r"#[0-9a-fA-F]{6}",
+                color,
+        ) is None:
+            raise ValueError(
+                "Nebula color must be a hexadecimal "
+                "RGB value such as #7a2f8f."
+            )
+
+        return color.lower()
+
+    def parseNebulaCells(self, value):
+        """Parse the cell list from the nebula editor."""
+
+        cells = []
+
+        lines = value.splitlines()
+
+        for lineNumber, rawLine in enumerate(
+                lines,
+                start=1,
+        ):
+            line = rawLine.strip()
+
+            if not line:
+                continue
+
+            match = re.fullmatch(
+                r"\(?\s*(-?\d+)\s*,\s*(-?\d+)\s*\)?",
+                line,
+            )
+
+            if match is None:
+                raise ValueError(
+                    "Invalid nebula cell on line "
+                    f"{lineNumber}: {rawLine}\n\n"
+                    "Use one cell per line in the form x,y."
+                )
+
+            x = int(
+                match.group(1)
+            )
+
+            y = int(
+                match.group(2)
+            )
+
+            if not (
+                    self.params["minX"]
+                    <= x
+                    <= self.params["maxX"]
+            ):
+                raise ValueError(
+                    f"Nebula cell X coordinate {x} "
+                    "is outside the current map bounds "
+                    f"({self.params['minX']} to "
+                    f"{self.params['maxX']})."
+                )
+
+            if not (
+                    self.params["minY"]
+                    <= y
+                    <= self.params["maxY"]
+            ):
+                raise ValueError(
+                    f"Nebula cell Y coordinate {y} "
+                    "is outside the current map bounds "
+                    f"({self.params['minY']} to "
+                    f"{self.params['maxY']})."
+                )
+
+            cell = (
+                x,
+                y,
+            )
+
+            if cell not in cells:
+                cells.append(cell)
+
+        if not cells:
+            raise ValueError(
+                "A nebula must contain at least one map cell."
+            )
+
+        return sorted(
+            cells,
+            key=lambda cell: (
+                cell[1],
+                cell[0],
+            ),
+        )
+
+    def applyNebulaChanges(self, event):
+        """Create or update a nebula."""
+
+        if self.isCreatingNebula:
+            self.createNewNebula()
+        else:
+            self.updateSelectedNebula()
+
+    def createNewNebula(self):
+        """Create a nebula from the editor values."""
+    
+        try:
+            values = self.readNebulaEditorValues(
+                wx.NOT_FOUND
+            )
+        except ValueError as error:
+            self.showNebulaValidationError(
+                error
+            )
+            return
+    
+        nebula = Nebula(
+            name=values["name"],
+            cells=values["cells"],
+            style=values["style"],
+            color=values["color"],
+            opacity=values["opacity"],
+        )
+    
+        nebula.normalize()
+    
+        self.nebulaList.append(
+            nebula
+        )
+    
+        newIndex = (
+                len(self.nebulaList) - 1
+        )
+    
+        self.leaveNebulaCreateMode()
+        self.refreshNebulaEditor(
+            newIndex
+        )
+    
+        self.SetStatusText(
+            f'Nebula "{nebula.name}" was created.'
+        )
+
+    def updateSelectedNebula(self):
+        """Update the selected nebula."""
+
+        index = self.selectedNebulaIndex
+
+        if (
+                index == wx.NOT_FOUND
+                or not 0 <= index < len(self.nebulaList)
+        ):
+            wx.MessageBox(
+                "Select a nebula before applying changes.",
+                "No nebula selected",
+                wx.OK | wx.ICON_INFORMATION,
+                )
+            return
+
+        try:
+            values = self.readNebulaEditorValues(
+                index
+            )
+        except ValueError as error:
+            self.showNebulaValidationError(
+                error
+            )
+            return
+
+        nebula = self.nebulaList[index]
+
+        nebula.name = values["name"]
+        nebula.style = values["style"]
+        nebula.color = values["color"]
+        nebula.opacity = values["opacity"]
+        nebula.cells = values["cells"]
+
+        nebula.normalize()
+
+        self.refreshNebulaEditor(
+            index
+        )
+
+        self.SetStatusText(
+            f'Changes to nebula "{nebula.name}" were applied.'
+        )
+
+    def deleteSelectedNebula(self, event):
+        """Delete the selected nebula."""
+
+        index = self.selectedNebulaIndex
+
+        if (
+                index == wx.NOT_FOUND
+                or not 0 <= index < len(self.nebulaList)
+        ):
+            return
+
+        nebula = self.nebulaList[index]
+
+        answer = wx.MessageBox(
+            (
+                f'Delete nebula "{nebula.name}"?'
+            ),
+            "Delete Nebula",
+            wx.YES_NO
+            | wx.NO_DEFAULT
+            | wx.ICON_WARNING,
+            )
+
+        if answer != wx.YES:
+            return
+
+        del self.nebulaList[index]
+
+        if self.nebulaList:
+            nextIndex = min(
+                index,
+                len(self.nebulaList) - 1,
+                )
+
+            self.refreshNebulaEditor(
+                nextIndex
+            )
+        else:
+            self.refreshNebulaEditor()
+
+        self.SetStatusText(
+            f'Nebula "{nebula.name}" was deleted.'
+        )
+
+    def clearNebulaDetails(self):
+        """Clear and disable the nebula editor."""
+
+        self.isCreatingNebula = False
+        self.nebulaCreationReturnIndex = (
+            wx.NOT_FOUND
+        )
+
+        self.selectedNebulaIndex = (
+            wx.NOT_FOUND
+        )
+
+        self.nebulaName.SetValue("")
+        self.nebulaStyle.SetSelection(0)
+        self.nebulaColor.SetValue(
+            "#7a2f8f"
+        )
+        self.nebulaOpacity.SetValue(
+            0.35
+        )
+        self.nebulaCells.SetValue("")
+
+        self.nebulaListControl.Enable()
+
+        self.newNebulaButton.Enable(
+            bool(self.params)
+        )
+
+        self.deleteNebulaButton.Disable()
+        self.cancelNebulaButton.Disable()
+        self.applyNebulaButton.Disable()
+
+        self.applyNebulaButton.SetLabel(
+            "Apply Changes"
+        )
+
+    def showNebulaValidationError(
+            self,
+            error,
+    ):
+        """Display a nebula validation error."""
+
+        wx.MessageBox(
+            str(error),
+            "Invalid nebula data",
+            wx.OK | wx.ICON_ERROR,
+            )
+
     def generateMap(self, event):
         """Generate a new random star map."""
 
@@ -1257,11 +2171,13 @@ class SMGFrame(wx.Frame):
         self.params = params
         self.starList = starList
         self.jumpList = jumpList
+        self.nebulaList = []
 
         self.renderCurrentMap()
         self.saveCurrentMap()
         self.drawMap(self.params["filename"])
         self.refreshSystemEditor()
+        self.refreshNebulaEditor()
         self.refreshMapBounds()
 
         self.SetStatusText(

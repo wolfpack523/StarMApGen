@@ -5,11 +5,11 @@ class Nebula:
     STYLE_OUTLINE = "outline"
     STYLE_HAZE = "haze"
 
-    VALID_STYLES = {
+    VALID_STYLES = (
         STYLE_CLOUD,
         STYLE_OUTLINE,
         STYLE_HAZE,
-    }
+    )
 
     def __init__(
             self,
@@ -20,10 +20,7 @@ class Nebula:
             opacity=0.35,
     ):
         self.name = name
-
-        self.cells = list(
-            cells or []
-        )
+        self.cells = list(cells or [])
 
         self.style = (
             style
@@ -32,13 +29,10 @@ class Nebula:
         )
 
         self.color = color
-
-        self.opacity = float(
-            opacity
-        )
+        self.opacity = float(opacity)
 
     def addCell(self, x, y):
-        """Add a cell if it is not already part of the nebula."""
+        """Add one map cell."""
 
         cell = (
             int(x),
@@ -46,12 +40,10 @@ class Nebula:
         )
 
         if cell not in self.cells:
-            self.cells.append(
-                cell
-            )
+            self.cells.append(cell)
 
     def removeCell(self, x, y):
-        """Remove a cell from the nebula."""
+        """Remove one map cell."""
 
         cell = (
             int(x),
@@ -59,43 +51,18 @@ class Nebula:
         )
 
         if cell in self.cells:
-            self.cells.remove(
-                cell
-            )
+            self.cells.remove(cell)
 
     def containsCell(self, x, y):
-        """Return whether a map cell belongs to this nebula."""
+        """Return whether the nebula contains a cell."""
 
         return (
             int(x),
             int(y),
         ) in self.cells
 
-    def getBounds(self):
-        """Return the rectangular cell bounds of the nebula."""
-
-        if not self.cells:
-            return None
-
-        xValues = [
-            x
-            for x, y in self.cells
-        ]
-
-        yValues = [
-            y
-            for x, y in self.cells
-        ]
-
-        return (
-            min(xValues),
-            min(yValues),
-            max(xValues),
-            max(yValues),
-        )
-
     def normalize(self):
-        """Remove duplicate cells and keep them in stable order."""
+        """Remove duplicates and sort cells by Y and X."""
 
         self.cells = sorted(
             set(self.cells),
