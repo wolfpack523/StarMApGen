@@ -14,6 +14,7 @@ class StarSystem:
 
         self.nStars = 0
         self.stars = []
+        self.planets = []
 
         self.mParams = params
         self.name = ""
