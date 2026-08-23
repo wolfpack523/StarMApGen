@@ -836,7 +836,7 @@ def writeNebula(
         nebula,
         index,
 ):
-    """Draw one nebula polygon."""
+    """Draw one smooth nebula boundary."""
 
     if len(nebula.points) < 3:
         return
@@ -846,8 +846,11 @@ def writeNebula(
         nebula,
     )
 
-    pointText = formatNebulaPoints(
-        points
+    pathData = createSmoothClosedPath(
+        points,
+        tension=getNebulaTension(
+            nebula.style
+        ),
     )
 
     file.write(
@@ -858,33 +861,35 @@ def writeNebula(
 
     if nebula.style == "outline":
         file.write(
-            '<polygon '
-            f'points="{pointText}" '
+            '<path '
+            f'd="{pathData}" '
             'fill="none" '
             f'stroke="{nebula.color}" '
             f'stroke-opacity="{nebula.opacity:f}" '
             f'stroke-width="{6 * p2mm:f}" '
             'stroke-linejoin="round" '
+            'stroke-linecap="round" '
             '/>\n'
         )
 
     elif nebula.style == "haze":
         file.write(
-            '<polygon '
-            f'points="{pointText}" '
+            '<path '
+            f'd="{pathData}" '
             f'fill="{nebula.color}" '
             f'fill-opacity="{nebula.opacity * 0.55:f}" '
             f'stroke="{nebula.color}" '
             f'stroke-opacity="{nebula.opacity * 0.35:f}" '
-            f'stroke-width="{10 * p2mm:f}" '
+            f'stroke-width="{18 * p2mm:f}" '
             'stroke-linejoin="round" '
+            'stroke-linecap="round" '
             '/>\n'
         )
 
     else:
         file.write(
-            '<polygon '
-            f'points="{pointText}" '
+            '<path '
+            f'd="{pathData}" '
             f'fill="{nebula.color}" '
             f'fill-opacity="{nebula.opacity:f}" '
             'stroke="none" '
@@ -947,13 +952,100 @@ def getNebulaSvgPoints(
 
     return svgPoints
 
-def formatNebulaPoints(points):
-    """Format SVG polygon points."""
+def createSmoothClosedPath(
+        points,
+        tension=1.0,
+):
+    """Create a smooth closed SVG path through all points."""
 
-    return " ".join(
-        f"{x:f},{y:f}"
-        for x, y in points
+    if len(points) < 3:
+        return ""
+
+    commands = []
+
+    firstPoint = points[0]
+
+    commands.append(
+        f"M {firstPoint[0]:f},{firstPoint[1]:f}"
     )
+
+    pointCount = len(points)
+
+    for index in range(pointCount):
+        previousPoint = points[
+            (index - 1) % pointCount
+            ]
+
+        currentPoint = points[
+            index
+        ]
+
+        nextPoint = points[
+            (index + 1) % pointCount
+            ]
+
+        nextNextPoint = points[
+            (index + 2) % pointCount
+            ]
+
+        controlPoint1 = (
+            currentPoint[0]
+            + (
+                    nextPoint[0]
+                    - previousPoint[0]
+            )
+            * tension
+            / 6.0,
+            currentPoint[1]
+            + (
+                    nextPoint[1]
+                    - previousPoint[1]
+            )
+            * tension
+            / 6.0,
+        )
+
+        controlPoint2 = (
+            nextPoint[0]
+            - (
+                    nextNextPoint[0]
+                    - currentPoint[0]
+            )
+            * tension
+            / 6.0,
+            nextPoint[1]
+            - (
+                    nextNextPoint[1]
+                    - currentPoint[1]
+            )
+            * tension
+            / 6.0,
+        )
+
+        commands.append(
+            "C "
+            f"{controlPoint1[0]:f},"
+            f"{controlPoint1[1]:f} "
+            f"{controlPoint2[0]:f},"
+            f"{controlPoint2[1]:f} "
+            f"{nextPoint[0]:f},"
+            f"{nextPoint[1]:f}"
+        )
+
+    commands.append("Z")
+
+    return " ".join(commands)
+
+def getNebulaTension(style):
+    """Return the curve tension for a nebula style."""
+
+    if style == "outline":
+        return 0.65
+
+    if style == "haze":
+        return 1.5
+
+    return 1.0
 
 def escapeSvgAttribute(value):
     """Escape text used inside an SVG attribute."""
