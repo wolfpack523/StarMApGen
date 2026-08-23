@@ -1127,11 +1127,6 @@ def createMap(
 
         file.write("</g>\n")
 
-        writeNebulae(
-            params,
-            file,
-            nebulaList,
-        )
 
         file.write(
             '<g id="grid" '
@@ -1199,6 +1194,17 @@ def createMap(
             file.write(code)
 
         file.write("</g>\n")
+
+        writeAxisLabels(
+            params,
+            file,
+        )
+
+        writeNebulae(
+            params,
+            file,
+            nebulaList,
+        )
 
         file.write(
             '<g id="jumps" '
@@ -1290,3 +1296,108 @@ if __name__ == '__main__':
 
     writeSystemData(p, starList)
     writeConnectionData(p, jumpList)
+
+def writeAxisLabels(
+        params,
+        file,
+):
+    """Draw X and Y coordinate labels along the map edges."""
+
+    minX = params.get(
+        "minX",
+        1,
+    )
+
+    maxX = params.get(
+        "maxX",
+        minX,
+    )
+
+    minY = params.get(
+        "minY",
+        1,
+    )
+
+    maxY = params.get(
+        "maxY",
+        minY,
+    )
+
+    fontSize = 24 * p2mm
+
+    file.write(
+        '<g id="axis-labels">\n'
+    )
+
+    # X axis labels at the top.
+    for x in range(
+            minX,
+            maxX + 1,
+    ):
+        localX = (
+                x
+                - minX
+                + 1
+        )
+
+        svgX = (
+                localX
+                * 150
+                * p2mm
+        )
+
+        svgY = (
+                35
+                * p2mm
+        )
+
+        file.write(
+            '<text '
+            f'x="{svgX:f}" '
+            f'y="{svgY:f}" '
+            f'font-size="{fontSize:f}" '
+            'font-family="Arial,Helvetica,sans-serif" '
+            'fill="#b0b0b0" '
+            'text-anchor="middle">'
+            f'{x}'
+            '</text>\n'
+        )
+
+    # Y axis labels on the left.
+    for y in range(
+            minY,
+            maxY + 1,
+    ):
+        localY = (
+                y
+                - minY
+                + 1
+        )
+
+        svgX = (
+                35
+                * p2mm
+        )
+
+        svgY = (
+                localY
+                * 150
+                * p2mm
+        )
+
+        file.write(
+            '<text '
+            f'x="{svgX:f}" '
+            f'y="{svgY:f}" '
+            f'font-size="{fontSize:f}" '
+            'font-family="Arial,Helvetica,sans-serif" '
+            'fill="#b0b0b0" '
+            'text-anchor="middle" '
+            'dominant-baseline="middle">'
+            f'{y}'
+            '</text>\n'
+        )
+
+    file.write(
+        "</g>\n"
+    )
