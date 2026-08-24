@@ -2,12 +2,12 @@ import random
 import re
 
 import wx
+from wx import StaticBoxSizer
 
 from StarSystem import StarSystem
 from PlanetEditorPanel import (
     PlanetEditorPanel,
 )
-
 from JumpLinkEditorPanel import (
     JumpLinkEditorPanel,
 )
@@ -36,8 +36,6 @@ class SystemEditorPanel(wx.Panel):
         self.creationReturnIndex = (
             wx.NOT_FOUND
         )
-
-        self.editedPlanets = []
 
         self.createControls()
 
@@ -96,24 +94,205 @@ class SystemEditorPanel(wx.Panel):
             label="Star Systems",
         )
 
-        self.systemList = wx.ListBox(
-            self,
-            size=(340, 140),
-            style=wx.LB_SINGLE,
+        self.createSystemListControls(editor_sizer)
+
+        self.createSystemDetailsControls(editor_sizer)
+
+        self.createSpectralTypeControls(editor_sizer)
+
+        self.createSubEditors(editor_sizer)
+
+        self.createSystemActionControls(editor_sizer)
+
+        panel_sizer = wx.BoxSizer(
+            wx.VERTICAL
         )
 
-        self.systemList.Bind(
-            wx.EVT_LISTBOX,
-            self.onSystemSelected,
+        panel_sizer.Add(
+            editor_sizer,
+            1,
+            wx.EXPAND,
+        )
+
+        self.SetSizer(
+            panel_sizer
+        )
+
+    def createSystemActionControls(self, editor_sizer: StaticBoxSizer):
+        editor_button_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.newSystemButton = wx.Button(
+            self,
+            label="New System",
+        )
+
+        self.newSystemButton.Bind(
+            wx.EVT_BUTTON,
+            self.beginNewSystem,
+        )
+
+        self.newSystemButton.Disable()
+
+        editor_button_sizer.Add(
+            self.newSystemButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.deleteSystemButton = wx.Button(
+            self,
+            label="Delete System",
+        )
+
+        self.deleteSystemButton.Bind(
+            wx.EVT_BUTTON,
+            self.deleteSelectedSystem,
+        )
+
+        self.deleteSystemButton.Disable()
+
+        editor_button_sizer.Add(
+            self.deleteSystemButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.cancelSystemButton = wx.Button(
+            self,
+            label="Cancel",
+        )
+
+        self.cancelSystemButton.Bind(
+            wx.EVT_BUTTON,
+            self.cancelNewSystem,
+        )
+
+        self.cancelSystemButton.Disable()
+
+        editor_button_sizer.Add(
+            self.cancelSystemButton,
+            0,
+            wx.RIGHT,
+            5,
+        )
+
+        self.applySystemButton = wx.Button(
+            self,
+            label="Apply Changes",
+        )
+
+        self.applySystemButton.Bind(
+            wx.EVT_BUTTON,
+            self.applySystemChanges,
+        )
+
+        self.applySystemButton.Disable()
+
+        editor_button_sizer.Add(
+            self.applySystemButton,
+            0,
         )
 
         editor_sizer.Add(
-            self.systemList,
+            editor_button_sizer,
             0,
-            wx.ALL | wx.EXPAND,
+            wx.ALL | wx.ALIGN_RIGHT,
             5,
-            )
+        )
 
+    def createSubEditors(self, editor_sizer: StaticBoxSizer):
+        self.planetEditor = (
+            PlanetEditorPanel(
+                self,
+                self.onPlanetEditorChanged,
+                self.SetStatusText,
+            )
+        )
+
+        editor_sizer.Add(
+            self.planetEditor,
+            0,
+            wx.EXPAND,
+        )
+
+        self.jumpEditor = (
+            JumpLinkEditorPanel(
+                self,
+                self,
+            )
+        )
+
+        editor_sizer.Add(
+            self.jumpEditor,
+            0,
+            wx.EXPAND,
+        )
+
+    def createSpectralTypeControls(self, editor_sizer: StaticBoxSizer):
+        spectral_help_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        spectral_hint = wx.StaticText(
+            self,
+            label=(
+                "Separate spectral types with commas, "
+                "semicolons, or new lines."
+            ),
+        )
+
+        spectral_hint.Wrap(240)
+
+        spectral_help_sizer.Add(
+            spectral_hint,
+            1,
+            wx.ALIGN_CENTER_VERTICAL,
+        )
+
+        self.randomizeSpectralTypesButton = wx.Button(
+            self,
+            label="Randomize",
+        )
+
+        self.randomizeSpectralTypesButton.Bind(
+            wx.EVT_BUTTON,
+            self.randomizeSpectralTypes,
+        )
+
+        self.randomizeSpectralTypesButton.Disable()
+
+        spectral_help_sizer.Add(
+            self.randomizeSpectralTypesButton,
+            0,
+            wx.LEFT,
+            5,
+        )
+
+        spectral_help_button = wx.Button(
+            self,
+            label="Spectral Type Help",
+        )
+
+        spectral_help_button.Bind(
+            wx.EVT_BUTTON,
+            self.showSpectralTypeHelp,
+        )
+
+        spectral_help_sizer.Add(
+            spectral_help_button,
+            0,
+            wx.LEFT,
+            5,
+        )
+
+        editor_sizer.Add(
+            spectral_help_sizer,
+            0,
+            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
+            5,
+        )
+
+    def createSystemDetailsControls(self, editor_sizer: StaticBoxSizer):
         details_sizer = wx.FlexGridSizer(
             cols=2,
             vgap=5,
@@ -255,191 +434,25 @@ class SystemEditorPanel(wx.Panel):
             0,
             wx.ALL | wx.EXPAND,
             5,
-            )
+        )
 
-        spectral_help_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        spectral_hint = wx.StaticText(
+    def createSystemListControls(self, editor_sizer: StaticBoxSizer):
+        self.systemList = wx.ListBox(
             self,
-            label=(
-                "Separate spectral types with commas, "
-                "semicolons, or new lines."
-            ),
+            size=(340, 140),
+            style=wx.LB_SINGLE,
         )
 
-        spectral_hint.Wrap(240)
-
-        spectral_help_sizer.Add(
-            spectral_hint,
-            1,
-            wx.ALIGN_CENTER_VERTICAL,
-        )
-
-        self.randomizeSpectralTypesButton = wx.Button(
-            self,
-            label="Randomize",
-        )
-
-        self.randomizeSpectralTypesButton.Bind(
-            wx.EVT_BUTTON,
-            self.randomizeSpectralTypes,
-        )
-
-        self.randomizeSpectralTypesButton.Disable()
-
-        spectral_help_sizer.Add(
-            self.randomizeSpectralTypesButton,
-            0,
-            wx.LEFT,
-            5,
-        )
-
-        spectral_help_button = wx.Button(
-            self,
-            label="Spectral Type Help",
-        )
-
-        spectral_help_button.Bind(
-            wx.EVT_BUTTON,
-            self.showSpectralTypeHelp,
-        )
-
-        spectral_help_sizer.Add(
-            spectral_help_button,
-            0,
-            wx.LEFT,
-            5,
+        self.systemList.Bind(
+            wx.EVT_LISTBOX,
+            self.onSystemSelected,
         )
 
         editor_sizer.Add(
-            spectral_help_sizer,
+            self.systemList,
             0,
-            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
+            wx.ALL | wx.EXPAND,
             5,
-            )
-
-        self.planetEditor = (
-            PlanetEditorPanel(
-                self,
-                self.onPlanetEditorChanged,
-                self.SetStatusText,
-            )
-        )
-
-        editor_sizer.Add(
-            self.planetEditor,
-            0,
-            wx.EXPAND,
-        )
-
-        self.jumpEditor = (
-            JumpLinkEditorPanel(
-                self,
-                self,
-            )
-        )
-
-        editor_sizer.Add(
-            self.jumpEditor,
-            0,
-            wx.EXPAND,
-        )
-
-        editor_button_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        self.newSystemButton = wx.Button(
-            self,
-            label="New System",
-        )
-
-        self.newSystemButton.Bind(
-            wx.EVT_BUTTON,
-            self.beginNewSystem,
-        )
-
-        self.newSystemButton.Disable()
-
-        editor_button_sizer.Add(
-            self.newSystemButton,
-            0,
-            wx.RIGHT,
-            5,
-        )
-
-        self.deleteSystemButton = wx.Button(
-            self,
-            label="Delete System",
-        )
-
-        self.deleteSystemButton.Bind(
-            wx.EVT_BUTTON,
-            self.deleteSelectedSystem,
-        )
-
-        self.deleteSystemButton.Disable()
-
-        editor_button_sizer.Add(
-            self.deleteSystemButton,
-            0,
-            wx.RIGHT,
-            5,
-        )
-
-        self.cancelSystemButton = wx.Button(
-            self,
-            label="Cancel",
-        )
-
-        self.cancelSystemButton.Bind(
-            wx.EVT_BUTTON,
-            self.cancelNewSystem,
-        )
-
-        self.cancelSystemButton.Disable()
-
-        editor_button_sizer.Add(
-            self.cancelSystemButton,
-            0,
-            wx.RIGHT,
-            5,
-        )
-
-        self.applySystemButton = wx.Button(
-            self,
-            label="Apply Changes",
-        )
-
-        self.applySystemButton.Bind(
-            wx.EVT_BUTTON,
-            self.applySystemChanges,
-        )
-
-        self.applySystemButton.Disable()
-
-        editor_button_sizer.Add(
-            self.applySystemButton,
-            0,
-        )
-
-        editor_sizer.Add(
-            editor_button_sizer,
-            0,
-            wx.ALL | wx.ALIGN_RIGHT,
-            5,
-            )
-
-        panel_sizer = wx.BoxSizer(
-            wx.VERTICAL
-        )
-
-        panel_sizer.Add(
-            editor_sizer,
-            1,
-            wx.EXPAND,
-        )
-
-        self.SetSizer(
-            panel_sizer
         )
 
     def onPlanetEditorChanged(self):
@@ -1255,11 +1268,8 @@ G2, M4, WD
 
         self.jumpEditor.clear()
 
-        self.editedPlanets = []
-
         self.planetEditor.clear()
 
-        self.cancelSystemButton.Disable()
         self.applySystemButton.Disable()
         self.cancelSystemButton.Disable()
 
