@@ -1,38 +1,13 @@
 #!/usr/bin/env python
-from JumpLink import JumpLink
 from StarSystem import StarSystem
-from math import sqrt, atan, acos, sin, cos, fabs
 
 p2mm = 0.26458333333  # /25.4/96
 
-JUMP_STATUS_STYLES = {
-    JumpLink.STATUS_NORMAL: {
-        "color": "#ffffff",
-        "strokeWidth": 5,
-        "dash": None,
-    },
-    JumpLink.STATUS_CAUTION: {
-        "color": "#ffd43b",
-        "strokeWidth": 5,
-        "dash": (12, 8),
-    },
-    JumpLink.STATUS_DANGEROUS: {
-        "color": "#ff7a00",
-        "strokeWidth": 7,
-        "dash": None,
-    },
-    JumpLink.STATUS_BLOCKED: {
-        "color": "#ff3b30",
-        "strokeWidth": 6,
-        "dash": (4, 7),
-    },
-    JumpLink.STATUS_LOST: {
-        "color": "#0033cc",
-        "strokeWidth": 6,
-        "dash": (4, 7),
-    },
-}
-
+from jumpRendering import (
+    draw_connections,
+    find_connections,
+    find_jumps,
+)
 
 def createDef(spType, starData, dDict):
     """Create the gradient definitions for the star symbols
@@ -555,247 +530,8 @@ def writeMapHeader(f, w, h):
     )
 
 
-def findConnections(systemList, jumpList):
-    """Create drawable connection data from JumpLink objects."""
-
-    connectionList = []
-
-    systemsByName = {
-        system.name: system
-        for system in systemList
-    }
-
-    for jump in jumpList:
-        # Transitional fallback in case an old tuple still exists
-        # somewhere in memory.
-        if isinstance(jump, JumpLink):
-            startName = jump.startName
-            endName = jump.endName
-            status = jump.status
-        else:
-            try:
-                startName = jump[0]
-                endName = jump[1]
-            except (IndexError, TypeError):
-                print(
-                    f"Ignoring invalid jump link: {jump}"
-                )
-                continue
-
-            status = JumpLink.STATUS_NORMAL
-
-        startSystem = systemsByName.get(startName)
-        endSystem = systemsByName.get(endName)
-
-        if startSystem is None or endSystem is None:
-            print(
-                f'Ignoring jump link "{startName}" -> '
-                f'"{endName}" because a system is missing.'
-            )
-            continue
-
-        if startSystem is endSystem:
-            print(
-                f'Ignoring self-link for "{startName}".'
-            )
-            continue
-
-        deltaX = startSystem.x - endSystem.x
-        deltaY = startSystem.y - endSystem.y
-        deltaZ = startSystem.z - endSystem.z
-
-        distance = int(
-            sqrt(
-                deltaX * deltaX
-                + deltaY * deltaY
-                + deltaZ * deltaZ
-            )
-            + 0.5
-        )
-
-        connectionList.append(
-            (
-                startSystem.drawnPos,
-                endSystem.drawnPos,
-                distance,
-                status,
-            )
-        )
-
-    return connectionList
 
 
-def findJumps(systemList):
-    """Generate normal jump links between nearby habitable systems."""
-
-    jumpList = []
-
-    habitableSystems = [
-        system
-        for system in systemList
-        if system.hasHabitable()
-    ]
-
-    for firstIndex in range(
-            len(habitableSystems)
-    ):
-        for secondIndex in range(
-                firstIndex + 1,
-                len(habitableSystems),
-        ):
-            firstSystem = habitableSystems[firstIndex]
-            secondSystem = habitableSystems[secondIndex]
-
-            deltaX = firstSystem.x - secondSystem.x
-            deltaY = firstSystem.y - secondSystem.y
-            deltaZ = firstSystem.z - secondSystem.z
-
-            distance = int(
-                sqrt(
-                    deltaX * deltaX
-                    + deltaY * deltaY
-                    + deltaZ * deltaZ
-                )
-                + 0.5
-            )
-
-            if distance < 15:
-                jumpList.append(
-                    JumpLink(
-                        firstSystem.name,
-                        secondSystem.name,
-                        JumpLink.STATUS_NORMAL,
-                    )
-                )
-
-    return jumpList
-
-
-def drawConnections(params, file, connectionList):
-    """Draw jump links using their configured route status."""
-
-    for connection in connectionList:
-        startPosition = connection[0]
-        endPosition = connection[1]
-        distance = connection[2]
-
-        status = (
-            connection[3]
-            if len(connection) > 3
-            else JumpLink.STATUS_NORMAL
-        )
-
-        style = JUMP_STATUS_STYLES.get(
-            status,
-            JUMP_STATUS_STYLES[
-                JumpLink.STATUS_NORMAL
-            ],
-        )
-
-        color = style["color"]
-
-        strokeWidth = (
-                style["strokeWidth"]
-                * p2mm
-        )
-
-        styleParts = [
-            f"stroke:{color}",
-            f"stroke-width:{strokeWidth:f}",
-            "fill:none",
-        ]
-
-        dash = style["dash"]
-
-        if dash is not None:
-            dashArray = ",".join(
-                f"{value * p2mm:f}"
-                for value in dash
-            )
-
-            styleParts.append(
-                f"stroke-dasharray:{dashArray}"
-            )
-
-        lineStyle = "; ".join(styleParts)
-
-        data = (
-            f'<g data-jump-status="{status}">'
-            f'<line style="{lineStyle}"'
-        )
-
-        data += (
-                ' x1="%f" y1="%f" x2="%f" y2="%f" />\n'
-                % (
-                    startPosition[0] * p2mm,
-                    startPosition[1] * p2mm,
-                    endPosition[0] * p2mm,
-                    endPosition[1] * p2mm,
-                )
-        )
-
-        offset = (-45.0, -45.0)
-        xScale = 0.0
-        yScale = 0.0
-        slope = 0.0
-        angle = 0.0
-
-        x1 = float(startPosition[0])
-        x2 = float(endPosition[0])
-        y1 = float(startPosition[1])
-        y2 = float(endPosition[1])
-
-        if x1 != x2:
-            slope = (y1 - y2) / (x2 - x1)
-            angle = atan(-slope) * 180 / acos(-1.0)
-
-            xScale = sin(
-                atan(slope) * 2
-            )
-
-            yScale = cos(
-                atan(slope) * 2
-            )
-
-            if fabs(angle) >= 45.0:
-                xScale = -xScale
-
-            if slope < 0:
-                xScale = -xScale
-        else:
-            xScale = -0.2
-            yScale = 0
-
-        if slope == 0:
-            yScale /= 2
-        elif fabs(angle) < 10:
-            yScale *= 0.8
-
-        xMiddle = (
-                          startPosition[0] + endPosition[0]
-                  ) / 2 + xScale * offset[0]
-
-        yMiddle = (
-                          startPosition[1] + endPosition[1]
-                  ) / 2 + yScale * offset[1]
-
-        data += (
-                '<text x="%f" y="%f" font-size="%f" '
-                'font-family="Arial,Helvetica,sans-serif" '
-                'fill="%s">'
-                % (
-                    xMiddle * p2mm,
-                    yMiddle * p2mm,
-                    40 * params["scale"] * p2mm,
-                    color,
-                )
-        )
-
-        data += (
-            f"{distance}</text></g>\n"
-        )
-
-        file.write(data)
 
 
 def writeNames(p, f, sList):
@@ -1221,7 +957,7 @@ def createMap(
             'inkscape:label="Jumps">\n'
         )
 
-        drawConnections(
+        draw_connections(
             params,
             file,
             connectionList,
@@ -1283,7 +1019,7 @@ if __name__ == '__main__':
         loadData(loadFile, p, starList, jumpList)
     else:  # generate the data randomly
         starList = createSystems(p)
-        jumpList = findJumps(starList)
+        jumpList = find_jumps(starList)
 
     print("there are", len(starList), "systems on the map")
 
@@ -1295,7 +1031,7 @@ if __name__ == '__main__':
     symbolList = createMapSymbols(p, starList, multipleList, defDict)
 
     # generate stellar distance data
-    connectionList = findConnections(starList, jumpList)
+    connectionList = find_connections(starList, jumpList)
 
     # draw map
     createMap(p, defDict, symbolList, connectionList, starList)
