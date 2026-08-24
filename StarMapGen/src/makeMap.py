@@ -6,30 +6,24 @@ from starRendering import (
     get_tweak_offset,
     sort_spec_type_for_display,
 )
-
-p2mm = 0.26458333333  # /25.4/96
-
 from jumpRendering import (
     draw_connections,
     find_connections,
     find_jumps,
 )
-
 from nebulaRendering import (
     write_nebulae,
 )
+from svgHelpers import (
+    escape_svg_attribute,
+    write_axis_labels,
+    write_defs,
+    write_map_header,
+    write_names,
+    write_symbols,
+)
 
-
-def writeDefs(f, dDict):
-    f.write(" <defs>\n")
-    for x in dDict:
-        f.write(dDict[x])
-    f.write(" </defs>\n")
-
-
-def writeSymbols(f, sList):
-    for x in sList:
-        f.write(x)
+p2mm = 0.26458333333  # /25.4/96
 
 
 def createSystems(p):
@@ -157,8 +151,8 @@ def createMapSymbols(
         data = (
                 '<g '
                 'class="star-system" '
-                f'data-system-name="{escapeSvgAttribute(system.name)}" '
-                f'data-tooltip="{escapeSvgAttribute(tooltipText)}" '
+                f'data-system-name="{escape_svg_attribute(system.name)}" '
+                f'data-tooltip="{escape_svg_attribute(tooltipText)}" '
                 'transform="translate(%f,%f)">'
                 % (
                     xPos * p2mm,
@@ -209,54 +203,6 @@ def createMapSymbols(
 
     return symbolList
 
-
-def writeMapHeader(f, w, h):
-    """Write a clean, standards-compliant SVG header."""
-
-    f.write(
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
-    )
-
-    f.write(
-        '<svg '
-        'xmlns="http://www.w3.org/2000/svg" '
-        'xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" '
-        'version="1.1" '
-        f'viewBox="0 0 {w:.6f} {h:.6f}" '
-        f'width="{w:.6f}" '
-        f'height="{h:.6f}" '
-        'preserveAspectRatio="xMidYMid meet">'
-        '\n'
-    )
-
-
-
-
-
-
-def writeNames(p, f, sList):
-    '''This adds in the names of the star systems.
-    Right now it just draws them to the upper left of the
-    star's symbol'''
-    offset = p['scale'] * 25
-    for s in sList:
-        data = '<g><text x="%f" y="%f" font-size="%f"' % ((s.drawnPos[0] + offset) * p2mm,
-                                                          (s.drawnPos[1] - offset) * p2mm, 50 * p['scale'] * p2mm)
-        data += ' font-family="Arial, Helvetica, sans-serif" fill="white">'
-        data += "%s</text></g>\n" % s.name
-        f.write(data)
-
-def escapeSvgAttribute(value):
-    """Escape text used inside an SVG attribute."""
-
-    return (
-        str(value)
-        .replace("&", "&amp;")
-        .replace('"', "&quot;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
-
 def createMap(
         params,
         defDict,
@@ -300,13 +246,13 @@ def createMap(
             "w",
             encoding="utf-8",
     ) as file:
-        writeMapHeader(
+        write_map_header(
             file,
             width,
             height,
         )
 
-        writeDefs(
+        write_defs(
             file,
             defDict,
         )
@@ -394,7 +340,7 @@ def createMap(
 
         file.write("</g>\n")
 
-        writeAxisLabels(
+        write_axis_labels(
             params,
             file,
         )
@@ -425,7 +371,7 @@ def createMap(
             'inkscape:label="Stars">\n'
         )
 
-        writeSymbols(
+        write_symbols(
             file,
             symbolList,
         )
@@ -438,7 +384,7 @@ def createMap(
             'inkscape:label="Names">\n'
         )
 
-        writeNames(
+        write_names(
             params,
             file,
             starList,
@@ -495,111 +441,6 @@ if __name__ == '__main__':
 
     writeSystemData(p, starList)
     writeConnectionData(p, jumpList)
-
-def writeAxisLabels(
-        params,
-        file,
-):
-    """Draw X and Y coordinate labels along the map edges."""
-
-    minX = params.get(
-        "minX",
-        1,
-    )
-
-    maxX = params.get(
-        "maxX",
-        minX,
-    )
-
-    minY = params.get(
-        "minY",
-        1,
-    )
-
-    maxY = params.get(
-        "maxY",
-        minY,
-    )
-
-    fontSize = 24 * p2mm
-
-    file.write(
-        '<g id="axis-labels">\n'
-    )
-
-    # X axis labels at the top.
-    for x in range(
-            minX,
-            maxX + 1,
-    ):
-        localX = (
-                x
-                - minX
-                + 1
-        )
-
-        svgX = (
-                localX
-                * 150
-                * p2mm
-        )
-
-        svgY = (
-                35
-                * p2mm
-        )
-
-        file.write(
-            '<text '
-            f'x="{svgX:f}" '
-            f'y="{svgY:f}" '
-            f'font-size="{fontSize:f}" '
-            'font-family="Arial,Helvetica,sans-serif" '
-            'fill="#b0b0b0" '
-            'text-anchor="middle">'
-            f'{x}'
-            '</text>\n'
-        )
-
-    # Y axis labels on the left.
-    for y in range(
-            minY,
-            maxY + 1,
-    ):
-        localY = (
-                y
-                - minY
-                + 1
-        )
-
-        svgX = (
-                35
-                * p2mm
-        )
-
-        svgY = (
-                localY
-                * 150
-                * p2mm
-        )
-
-        file.write(
-            '<text '
-            f'x="{svgX:f}" '
-            f'y="{svgY:f}" '
-            f'font-size="{fontSize:f}" '
-            'font-family="Arial,Helvetica,sans-serif" '
-            'fill="#b0b0b0" '
-            'text-anchor="middle" '
-            'dominant-baseline="middle">'
-            f'{y}'
-            '</text>\n'
-        )
-
-    file.write(
-        "</g>\n"
-    )
 
 def createSystemTooltipText(system):
     """Create the tooltip text stored on a star system SVG group."""

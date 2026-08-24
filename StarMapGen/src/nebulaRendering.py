@@ -1,3 +1,7 @@
+from svgHelpers import (
+    escape_svg_attribute,
+)
+
 P2MM = 0.26458333333
 
 def write_nebulae(
@@ -241,12 +245,3 @@ def get_nebula_tension(style):
         return 1.5
 
     return 1.0
-
-def escape_svg_attribute(value):
-    return (
-        str(value)
-        .replace("&", "&amp;")
-        .replace('"', "&quot;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
