@@ -23,19 +23,13 @@ from writeData import (
     writeSystemData, writeFactionData,
 )
 from exportPng import exportPng
-from JumpLinkDialog import (
-    JUMP_STATUS_OPTIONS,
-)
 from SystemEditorPanel import (
     SystemEditorPanel,
 )
 from NebulaEditorPanel import (
     NebulaEditorPanel,
 )
-
-JUMP_STATUS_LABELS = dict(
-    JUMP_STATUS_OPTIONS
-)
+from MapBoundsPanel import MapBoundsPanel
 
 class SMGFrame(wx.Frame):
     def __init__(self):
@@ -76,9 +70,28 @@ class SMGFrame(wx.Frame):
             inputSizer,
         )
 
-        self.createMapBoundsControls(
+        (
+            self.mapBoundsPanel,
+            boundsParent,
+            boundsSizer,
+        ) = self.createCollapsibleSection(
             self.inputPanel,
             inputSizer,
+            "Map Bounds",
+            expanded=False,
+        )
+
+        self.mapBoundsPanel = (
+            MapBoundsPanel(
+                boundsParent,
+                self,
+            )
+        )
+
+        boundsSizer.Add(
+            self.mapBoundsPanel,
+            1,
+            wx.EXPAND,
         )
 
         self.systemEditor = (
@@ -574,132 +587,7 @@ class SMGFrame(wx.Frame):
             5,
         )
 
-    def createMapBoundsControls(
-            self,
-            parent,
-            inputSizer,
-    ):
-        """Create collapsible controls for extending the map."""
 
-        (
-            self.mapBoundsPane,
-            boundsParent,
-            boundsSizer,
-        ) = self.createCollapsibleSection(
-            parent,
-            inputSizer,
-            "Map Bounds",
-            expanded=False,
-        )
-
-        self.mapBoundsLabel = wx.StaticText(
-            boundsParent,
-            label="No map loaded.",
-        )
-
-        self.mapBoundsLabel.Wrap(
-            330
-        )
-
-        boundsSizer.Add(
-            self.mapBoundsLabel,
-            0,
-            wx.ALL | wx.EXPAND,
-            5,
-        )
-
-        amountSizer = wx.BoxSizer(
-            wx.HORIZONTAL
-        )
-
-        amountSizer.Add(
-            wx.StaticText(
-                boundsParent,
-                label="Extend by:",
-            ),
-            1,
-            wx.ALIGN_CENTER_VERTICAL
-            | wx.RIGHT,
-            5,
-        )
-
-        self.extendAmount = wx.lib.intctrl.IntCtrl(
-            boundsParent,
-            min=1,
-        )
-
-        self.extendAmount.SetValue(
-            5
-        )
-
-        self.extendAmount.Disable()
-
-        amountSizer.Add(
-            self.extendAmount,
-            0,
-        )
-
-        boundsSizer.Add(
-            amountSizer,
-            0,
-            wx.LEFT
-            | wx.RIGHT
-            | wx.BOTTOM
-            | wx.EXPAND,
-            5,
-        )
-
-        buttonGrid = wx.GridSizer(
-            rows=2,
-            cols=3,
-            vgap=5,
-            hgap=5,
-        )
-
-        buttonDefinitions = [
-            ("X -", "x-"),
-            ("Y -", "y-"),
-            ("Z -", "z-"),
-            ("X +", "x+"),
-            ("Y +", "y+"),
-            ("Z +", "z+"),
-        ]
-
-        self.mapBoundsButtons = []
-
-        for label, direction in buttonDefinitions:
-            button = wx.Button(
-                boundsParent,
-                label=label,
-            )
-
-            button.Bind(
-                wx.EVT_BUTTON,
-                lambda event, value=direction:
-                self.extendMap(value),
-            )
-
-            button.Disable()
-
-            self.mapBoundsButtons.append(
-                button
-            )
-
-            buttonGrid.Add(
-                button,
-                1,
-                wx.EXPAND,
-            )
-
-        boundsSizer.Add(
-            buttonGrid,
-            0,
-            wx.LEFT
-            | wx.RIGHT
-            | wx.BOTTOM
-            | wx.EXPAND,
-            5,
-        )
 
 
 
@@ -902,124 +790,9 @@ class SMGFrame(wx.Frame):
 
         return params
 
-    def refreshMapBounds(self):
-        """Display the current absolute map bounds."""
 
-        requiredKeys = (
-            "minX",
-            "maxX",
-            "minY",
-            "maxY",
-            "minZ",
-            "maxZ",
-        )
 
-        hasMapBounds = (
-                bool(self.params)
-                and all(
-            key in self.params
-            for key in requiredKeys
-        )
-        )
 
-        if not hasMapBounds:
-            self.mapBoundsLabel.SetLabel(
-                "No map loaded."
-            )
-
-            self.extendAmount.Disable()
-
-            for button in self.mapBoundsButtons:
-                button.Disable()
-
-            self.refreshInputPanelLayout()
-            return
-
-        width = (
-                self.params["maxX"]
-                - self.params["minX"]
-                + 1
-        )
-
-        height = (
-                self.params["maxY"]
-                - self.params["minY"]
-                + 1
-        )
-
-        depth = (
-                self.params["maxZ"]
-                - self.params["minZ"]
-                + 1
-        )
-
-        self.mapBoundsLabel.SetLabel(
-            f'X: {self.params["minX"]} to '
-            f'{self.params["maxX"]} '
-            f"({width} points)\n"
-            f'Y: {self.params["minY"]} to '
-            f'{self.params["maxY"]} '
-            f"({height} points)\n"
-            f'Z: {self.params["minZ"]} to '
-            f'{self.params["maxZ"]} '
-            f"({depth} levels)"
-        )
-
-        self.extendAmount.Enable()
-
-        for button in self.mapBoundsButtons:
-            button.Enable()
-
-        self.refreshInputPanelLayout()
-
-    def extendMap(self, direction):
-        """Extend the current map in one direction."""
-
-        directionDefinitions = {
-            "x-": ("minX", -1, "negative X"),
-            "x+": ("maxX", 1, "positive X"),
-            "y-": ("minY", -1, "negative Y"),
-            "y+": ("maxY", 1, "positive Y"),
-            "z-": ("minZ", -1, "negative Z"),
-            "z+": ("maxZ", 1, "positive Z"),
-        }
-
-        if direction not in directionDefinitions:
-            return
-
-        if not self.hasCurrentMapBounds():
-            wx.MessageBox(
-                "Generate or load a map before extending it.",
-                "No Map Available",
-                wx.OK | wx.ICON_INFORMATION,
-            )
-            return
-
-        amount = self.extendAmount.GetValue()
-
-        if amount < 1:
-            wx.MessageBox(
-                "The extension amount must be at least 1.",
-                "Invalid Extension Amount",
-                wx.OK | wx.ICON_ERROR,
-            )
-            return
-
-        parameterName, factor, label = (
-            directionDefinitions[direction]
-        )
-
-        # This updates the actual map model.
-        self.params[parameterName] += (
-                factor * amount
-        )
-
-        self.saveAndRedrawCurrentMap()
-
-        self.SetStatusText(
-            f"Map extended by {amount} "
-            f"unit(s) towards {label}."
-        )
 
     def drawMap(self, file):
         self.mapPanel.setMap(file)
@@ -1206,3 +979,6 @@ class SMGFrame(wx.Frame):
 
     def clearNebulaDetails(self):
         self.nebulaEditor.clearNebulaDetails()
+
+    def refreshMapBounds(self):
+        self.mapBoundsPanel.refreshMapBoundsControls()
