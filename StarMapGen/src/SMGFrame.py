@@ -31,6 +31,9 @@ from MapBoundsPanel import MapBoundsPanel
 from MapParametersPanel import (
     MapParametersPanel,
 )
+from RandomGenerationPanel import (
+    RandomGenerationPanel,
+)
 
 class SMGFrame(wx.Frame):
     def __init__(self):
@@ -86,6 +89,30 @@ class SMGFrame(wx.Frame):
         
         filesSizer.Add(
             self.mapParametersPanel,
+            1,
+            wx.EXPAND,
+        )
+
+        (
+            self.randomGenerationPane,
+            randomParent,
+            randomSizer,
+        ) = self.createCollapsibleSection(
+            self.inputPanel,
+            inputSizer,
+            "Random Generation",
+            expanded=False,
+        )
+
+        self.randomGenerationPanel = (
+            RandomGenerationPanel(
+                randomParent,
+                self,
+            )
+        )
+
+        randomSizer.Add(
+            self.randomGenerationPanel,
             1,
             wx.EXPAND,
         )
@@ -626,10 +653,75 @@ class SMGFrame(wx.Frame):
             )
 
     def createParamDict(self):
-        return (
-            self.mapParametersPanel
-            .createParamDict()
+        """Create parameters for generating or loading a map."""
+
+        params = {}
+
+        xSize = (
+            self.randomGenerationPanel
+            .xSize
+            .GetValue()
         )
+
+        ySize = (
+            self.randomGenerationPanel
+            .ySize
+            .GetValue()
+        )
+
+        zSize = (
+            self.randomGenerationPanel
+            .zSize
+            .GetValue()
+        )
+
+        params["minX"] = 1
+        params["maxX"] = xSize
+
+        params["minY"] = 1
+        params["maxY"] = ySize
+
+        zValue = zSize // 2
+
+        params["minZ"] = -zValue
+        params["maxZ"] = zValue
+
+        if zSize % 2 == 0:
+            params["minZ"] += 1
+
+        params["stellarDensity"] = (
+            self.randomGenerationPanel
+            .stellarDensity
+            .GetValue()
+        )
+
+        params["filename"] = (
+            self.mapParametersPanel
+            .outMapName
+            .GetValue()
+            .strip()
+        )
+
+        params["datafile"] = (
+            self.mapParametersPanel
+            .dataName
+            .GetValue()
+            .strip()
+        )
+
+        params["scale"] = (
+            self.mapParametersPanel
+            .textScale
+            .GetValue()
+        )
+
+        params["printZ"] = (
+            self.mapParametersPanel
+            .printZ
+            .GetValue()
+        )
+
+        return params
 
     def refreshMapControls(self):
         """Refresh all controls that depend on the current map."""

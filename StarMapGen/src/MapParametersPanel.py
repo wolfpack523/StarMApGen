@@ -1,5 +1,4 @@
 import wx
-import wx.lib.intctrl
 from wx.lib.masked import NumCtrl
 
 
@@ -61,10 +60,6 @@ class MapParametersPanel(wx.Panel):
         )
 
         self.createFilesAndDisplayControls(
-            panel_sizer
-        )
-
-        self.createRandomGenerationControls(
             panel_sizer
         )
 
@@ -202,74 +197,6 @@ class MapParametersPanel(wx.Panel):
             5,
             )
 
-    def createRandomGenerationControls(
-            self,
-            target_sizer,
-    ):
-        """Create random map generation controls."""
-
-        self.xSize = wx.lib.intctrl.IntCtrl(
-            self,
-            min=1,
-        )
-
-        self.addControlRow(
-            target_sizer,
-            "Map Width (x):",
-            self.xSize,
-        )
-
-        self.ySize = wx.lib.intctrl.IntCtrl(
-            self,
-            min=1,
-        )
-
-        self.addControlRow(
-            target_sizer,
-            "Map Height (y):",
-            self.ySize,
-        )
-
-        self.zSize = wx.lib.intctrl.IntCtrl(
-            self,
-            min=1,
-        )
-
-        self.addControlRow(
-            target_sizer,
-            "Map Thickness (z):",
-            self.zSize,
-        )
-
-        self.stellarDensity = NumCtrl(
-            self,
-            min=0,
-            fractionWidth=4,
-        )
-
-        self.addControlRow(
-            target_sizer,
-            "Stellar Density:",
-            self.stellarDensity,
-        )
-
-        generate_button = wx.Button(
-            self,
-            label="Generate Random Map",
-        )
-
-        generate_button.Bind(
-            wx.EVT_BUTTON,
-            self.onGenerateMap,
-        )
-
-        target_sizer.Add(
-            generate_button,
-            0,
-            wx.ALL | wx.ALIGN_RIGHT,
-            5,
-            )
-
     def addControlRow(
             self,
             section_sizer,
@@ -312,56 +239,10 @@ class MapParametersPanel(wx.Panel):
         )
 
     def setDefaults(self):
-        self.xSize.SetValue(20)
-        self.ySize.SetValue(20)
-        self.zSize.SetValue(20)
-        self.stellarDensity.SetValue(0.004)
         self.textScale.SetValue(1)
         self.outMapName.SetValue("sampleMap.svg")
         self.dataName.SetValue("sampleMap.dat")
         self.printZ.SetValue(True)
-
-    def createParamDict(self):
-        """Create parameters for generating a new random map."""
-
-        params = {}
-
-        # New randomly generated maps begin at X=1 and Y=1.
-        params["minX"] = 1
-        params["maxX"] = self.xSize.GetValue()
-
-        params["minY"] = 1
-        params["maxY"] = self.ySize.GetValue()
-
-        z_value = self.zSize.GetValue() // 2
-
-        params["minZ"] = -z_value
-        params["maxZ"] = z_value
-
-        if self.zSize.GetValue() % 2 == 0:
-            params["minZ"] += 1
-
-        params["stellarDensity"] = (
-            self.stellarDensity.GetValue()
-        )
-
-        params["filename"] = (
-            self.outMapName.GetValue().strip()
-        )
-
-        params["datafile"] = (
-            self.dataName.GetValue().strip()
-        )
-
-        params["scale"] = (
-            self.textScale.GetValue()
-        )
-
-        params["printZ"] = (
-            self.printZ.GetValue()
-        )
-
-        return params
 
     def refreshExportControls(self):
         """Enable export controls when a map exists."""
