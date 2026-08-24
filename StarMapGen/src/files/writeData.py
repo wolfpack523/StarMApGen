@@ -1,4 +1,4 @@
-from JumpLink import JumpLink
+from domain.JumpLink import JumpLink
 
 def writeSystemData(params, systemList):
     """Write the map bounds and all star systems."""

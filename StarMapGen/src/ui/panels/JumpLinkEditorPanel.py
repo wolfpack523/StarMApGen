@@ -1,7 +1,7 @@
 import wx
 
-from JumpLink import JumpLink
-from JumpLinkDialog import (
+from domain.JumpLink import JumpLink
+from ui.dialogs.JumpLinkDialog import (
     JumpLinkDialog,
     JUMP_STATUS_OPTIONS,
 )

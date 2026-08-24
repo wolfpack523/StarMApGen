@@ -1,13 +1,13 @@
-from starRendering import (
+from rendering.starRendering import (
     create_symbol,
     get_star_offset_list,
     get_tweak_offset,
     sort_spec_type_for_display,
 )
-from svgHelpers import (
+from rendering.svgHelpers import (
     escape_svg_attribute,
 )
-from svgHelpers import P2MM
+from rendering.svgHelpers import P2MM
 
 
 from collections import Counter

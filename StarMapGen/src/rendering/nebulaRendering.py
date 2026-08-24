@@ -1,7 +1,7 @@
-from svgHelpers import (
+from rendering.svgHelpers import (
     escape_svg_attribute,
 )
-from svgHelpers import P2MM
+from rendering.svgHelpers import P2MM
 
 
 def write_nebulae(

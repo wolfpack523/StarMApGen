@@ -1,7 +1,7 @@
 import wx
 
-from Planet import Planet
-from PlanetDialog import PlanetDialog
+from domain.Planet import Planet
+from ui.dialogs.PlanetDialog import PlanetDialog
 
 
 class PlanetEditorPanel(wx.Panel):

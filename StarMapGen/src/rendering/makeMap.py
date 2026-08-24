@@ -1,26 +1,26 @@
 #!/usr/bin/env python
-from StarSystem import StarSystem
+from domain.StarSystem import StarSystem
 
-from jumpRendering import (
+from rendering.jumpRendering import (
     draw_connections,
     find_connections,
     find_jumps,
 )
-from nebulaRendering import (
+from rendering.nebulaRendering import (
     write_nebulae,
 )
-from svgHelpers import (
+from rendering.svgHelpers import (
     write_axis_labels,
     write_defs,
     write_map_header,
     write_names,
     write_symbols,
 )
-from systemRendering import (
+from rendering.systemRendering import (
     create_map_symbols,
     find_overlaps,
 )
-from svgHelpers import P2MM
+from rendering.svgHelpers import P2MM
 
 
 def createSystems(p):
@@ -300,7 +300,7 @@ if __name__ == '__main__':
     # parse command-line options for size of map, 2D or 3D, grid type, distance threshold and whatever else I think to add
 
     # generate list of star system data
-    from loadData import loadData
+    from files.loadData import loadData
 
     loadFile = "YaziraSectorData.txt"
     if loadFile:  # read the data from the specified file
@@ -327,7 +327,7 @@ if __name__ == '__main__':
     createMap(p, defDict, symbolList, connectionList, starList)
 
     # write out the star system data
-    from writeData import writeSystemData, writeConnectionData
+    from files.writeData import writeSystemData, writeConnectionData
 
     writeSystemData(p, starList)
     writeConnectionData(p, jumpList)

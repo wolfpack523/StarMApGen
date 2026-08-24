@@ -3,39 +3,39 @@ import threading
 import wx
 import wx.lib.scrolledpanel
 
-from loadData import loadData
-from makeMap import (
+from files.loadData import loadData
+from rendering.makeMap import (
     createMap as writeSvgMap,
     createSystems,
 )
-from systemRendering import (
+from rendering.systemRendering import (
     create_map_symbols,
     find_overlaps,
 )
-from jumpRendering import (
+from rendering.jumpRendering import (
     find_connections,
     find_jumps,
 )
-from SMGMapPanel import SMGMapPanel
-from StarSystem import StarSystem
-from writeData import (
+from ui.SMGMapPanel import SMGMapPanel
+from domain.StarSystem import StarSystem
+from files.writeData import (
     writeConnectionData,
     writeNebulaData,
     writePlanetData,
     writeSystemData, writeFactionData,
 )
-from exportPng import exportPng
-from SystemEditorPanel import (
+from files.exportPng import exportPng
+from ui.panels.SystemEditorPanel import (
     SystemEditorPanel,
 )
-from NebulaEditorPanel import (
+from ui.panels.NebulaEditorPanel import (
     NebulaEditorPanel,
 )
-from MapBoundsPanel import MapBoundsPanel
-from MapParametersPanel import (
+from ui.panels.MapBoundsPanel import MapBoundsPanel
+from ui.panels.MapParametersPanel import (
     MapParametersPanel,
 )
-from RandomGenerationPanel import (
+from ui.panels.RandomGenerationPanel import (
     RandomGenerationPanel,
 )
 

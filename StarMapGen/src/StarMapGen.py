@@ -4,7 +4,7 @@ from pathlib import Path
 
 import wx
 
-from SMGFrame import SMGFrame
+from ui.SMGFrame import SMGFrame
 
 
 def configureWorkingDirectory():
