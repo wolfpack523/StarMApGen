@@ -7,40 +7,37 @@ from starRendering import (
 from svgHelpers import (
     escape_svg_attribute,
 )
+from svgHelpers import P2MM
 
-P2MM = 0.26458333333
+
+from collections import Counter
+
 
 def find_overlaps(
         system_list,
 ):
-    positions = [
+    position_counts = Counter(
         system.mapPos
         for system in system_list
+    )
+
+    multiple_positions = [
+        position
+        for position, count
+        in position_counts.items()
+        if count > 1
     ]
 
-    multiple_positions = []
-
-    for position in positions:
-        count = positions.count(
-            position
+    for position in multiple_positions:
+        print(
+            "there are",
+            position_counts[position],
+            "systems at",
+            position,
         )
 
-        if (
-                count > 1
-                and position not in multiple_positions
-        ):
-            multiple_positions.append(
-                position
-            )
-
-            print(
-                "there are",
-                count,
-                "systems at",
-                position,
-            )
-
     return multiple_positions
+
 
 def create_system_tooltip_text(
         system,
@@ -73,6 +70,7 @@ def create_system_tooltip_text(
     return "\n".join(
         lines
     )
+
 
 def create_map_symbols(
         p,

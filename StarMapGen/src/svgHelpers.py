@@ -1,6 +1,5 @@
 P2MM = 0.26458333333
 
-
 def write_defs(
         file,
         definitions,

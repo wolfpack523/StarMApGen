@@ -1,8 +1,8 @@
 from svgHelpers import (
     escape_svg_attribute,
 )
+from svgHelpers import P2MM
 
-P2MM = 0.26458333333
 
 def write_nebulae(
         params,
@@ -102,6 +102,7 @@ def write_nebula(
     file.write(
         "</g>\n"
     )
+
 
 def get_nebula_svg_points(
         params,

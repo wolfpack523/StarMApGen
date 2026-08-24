@@ -1,4 +1,5 @@
-P2MM = 0.26458333333
+from svgHelpers import P2MM
+
 
 def get_params2(sp_type):
     return {
@@ -127,6 +128,7 @@ def sort_spec_type_for_display(sp_type):
         sp_type
     )
 
+
 def interpolate_colors(
         spectral_type,
         index,
@@ -209,6 +211,7 @@ def interpolate_colors(
         f"{blue:02x}"
     )
 
+
 def create_def(sp_type, star_data, d_dict):
     """Create the gradient definitions for the star symbols
 
@@ -275,6 +278,7 @@ def create_def(sp_type, star_data, d_dict):
         d_dict[g3] = s3
 
     return gList
+
 
 def create_symbol(p, sp_type, pos, d_dict):
     scale = p['scale'] * P2MM
@@ -381,4 +385,3 @@ def get_star_offset_list(n):
         return [(-42, -42), (0, -60), (42, -42), (60, 0), (42, 42), (0, 60), (-42, 42), (-60, 0), (20, -20), (-20, 20)]
     else:
         return [(0, 0) * n]
-
