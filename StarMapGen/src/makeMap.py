@@ -55,8 +55,6 @@ def createSystems(p):
 
     return systemList
 
-
-
 def createMap(
         params,
         defDict,
@@ -68,29 +66,36 @@ def createMap(
     if nebulaList is None:
         nebulaList = []
 
-    minX = params.get("minX", 1)
-    minY = params.get("minY", 1)
+    min_x = params.get(
+        "minX",
+        1,
+    )
 
-    mapWidth = (
+    min_y = params.get(
+        "minY",
+        1,
+    )
+
+    map_width = (
             params["maxX"]
-            - minX
+            - min_x
             + 1
     )
 
-    mapHeight = (
+    map_height = (
             params["maxY"]
-            - minY
+            - min_y
             + 1
     )
 
     width = (
-            (mapWidth + 1)
+            (map_width + 1)
             * 150
             * p2mm
     )
 
     height = (
-            (mapHeight + 1)
+            (map_height + 1)
             * 150
             * p2mm
     )
@@ -111,88 +116,17 @@ def createMap(
             defDict,
         )
 
-        file.write(
-            '<g id="background" '
-            'inkscape:groupmode="layer" '
-            'inkscape:label="Background">\n'
+        _write_background(
+            file,
+            width,
+            height,
         )
 
-        file.write(
-            ' <rect '
-            f'height="{height:f}" '
-            f'width="{width:f}" '
-            'y="0" x="0" fill="#000"/>\n'
+        _write_grid(
+            file,
+            map_width,
+            map_height,
         )
-
-        file.write("</g>\n")
-
-
-        file.write(
-            '<g id="grid" '
-            'inkscape:groupmode="layer" '
-            'inkscape:label="Grid">\n'
-        )
-
-        xMin = 75
-        yMin = 75
-
-        xMax = (
-                mapWidth * 150
-                + 75
-        )
-
-        yMax = (
-                mapHeight * 150
-                + 75
-        )
-
-        for index in range(mapWidth + 1):
-            x = (
-                    index * 150
-                    + 75
-            )
-
-            code = (
-                    '<line '
-                    'x1="%f" y1="%f" '
-                    'x2="%f" y2="%f" '
-                    'style="stroke:rgb(100,100,100); '
-                    'stroke-width:%f" />\n'
-                    % (
-                        x * p2mm,
-                        yMin * p2mm,
-                        x * p2mm,
-                        yMax * p2mm,
-                        3 * p2mm,
-                    )
-            )
-
-            file.write(code)
-
-        for index in range(mapHeight + 1):
-            y = (
-                    index * 150
-                    + 75
-            )
-
-            code = (
-                    '<line '
-                    'x1="%f" y1="%f" '
-                    'x2="%f" y2="%f" '
-                    'style="stroke:rgb(100,100,100); '
-                    'stroke-width:%f" />\n'
-                    % (
-                        xMin * p2mm,
-                        y * p2mm,
-                        xMax * p2mm,
-                        y * p2mm,
-                        3 * p2mm,
-                    )
-            )
-
-            file.write(code)
-
-        file.write("</g>\n")
 
         write_axis_labels(
             params,
@@ -217,7 +151,9 @@ def createMap(
             connectionList,
         )
 
-        file.write("</g>\n")
+        file.write(
+            "</g>\n"
+        )
 
         file.write(
             '<g id="stars" '
@@ -230,7 +166,9 @@ def createMap(
             symbolList,
         )
 
-        file.write("</g>\n")
+        file.write(
+            "</g>\n"
+        )
 
         file.write(
             '<g id="names" '
@@ -244,9 +182,108 @@ def createMap(
             starList,
         )
 
-        file.write("</g>\n")
-        file.write("</svg>")
+        file.write(
+            "</g>\n"
+        )
 
+        file.write(
+            "</svg>"
+        )
+
+
+def _write_background(
+        file,
+        width,
+        height,
+):
+    """Write the map background layer."""
+
+    file.write(
+        '<g id="background" '
+        'inkscape:groupmode="layer" '
+        'inkscape:label="Background">\n'
+    )
+
+    file.write(
+        ' <rect '
+        f'height="{height:f}" '
+        f'width="{width:f}" '
+        'y="0" x="0" fill="#000"/>\n'
+    )
+
+    file.write(
+        "</g>\n"
+    )
+
+def _write_grid(
+        file,
+        map_width,
+        map_height,
+):
+    """Write the map coordinate grid."""
+
+    file.write(
+        '<g id="grid" '
+        'inkscape:groupmode="layer" '
+        'inkscape:label="Grid">\n'
+    )
+
+    x_min = 75
+    y_min = 75
+
+    x_max = (
+            map_width
+            * 150
+            + 75
+    )
+
+    y_max = (
+            map_height
+            * 150
+            + 75
+    )
+
+    for index in range(
+            map_width + 1
+    ):
+        x = (
+                index
+                * 150
+                + 75
+        )
+
+        file.write(
+            '<line '
+            f'x1="{x * p2mm:f}" '
+            f'y1="{y_min * p2mm:f}" '
+            f'x2="{x * p2mm:f}" '
+            f'y2="{y_max * p2mm:f}" '
+            'style="stroke:rgb(100,100,100); '
+            f'stroke-width:{3 * p2mm:f}" />\n'
+        )
+
+    for index in range(
+            map_height + 1
+    ):
+        y = (
+                index
+                * 150
+                + 75
+        )
+
+        file.write(
+            '<line '
+            f'x1="{x_min * p2mm:f}" '
+            f'y1="{y * p2mm:f}" '
+            f'x2="{x_max * p2mm:f}" '
+            f'y2="{y * p2mm:f}" '
+            'style="stroke:rgb(100,100,100); '
+            f'stroke-width:{3 * p2mm:f}" />\n'
+        )
+
+    file.write(
+        "</g>\n"
+    )
 
 if __name__ == '__main__':
     #	seed(3)  # this gives two star systems on the same (x,y) with p = {'maxX':12,'maxY':12,'minZ':-12,'maxZ':12}
@@ -295,3 +332,4 @@ if __name__ == '__main__':
 
     writeSystemData(p, starList)
     writeConnectionData(p, jumpList)
+
