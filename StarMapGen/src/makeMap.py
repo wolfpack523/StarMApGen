@@ -1,11 +1,6 @@
 #!/usr/bin/env python
 from StarSystem import StarSystem
-from starRendering import (
-    create_symbol,
-    get_star_offset_list,
-    get_tweak_offset,
-    sort_spec_type_for_display,
-)
+
 from jumpRendering import (
     draw_connections,
     find_connections,
@@ -15,12 +10,15 @@ from nebulaRendering import (
     write_nebulae,
 )
 from svgHelpers import (
-    escape_svg_attribute,
     write_axis_labels,
     write_defs,
     write_map_header,
     write_names,
     write_symbols,
+)
+from systemRendering import (
+    create_map_symbols,
+    find_overlaps,
 )
 
 p2mm = 0.26458333333  # /25.4/96
@@ -58,150 +56,6 @@ def createSystems(p):
     return systemList
 
 
-def findOverlaps(sList):
-    mList = []
-    mulList = []
-    for x in sList:
-        mList.append(x.mapPos)
-    for x in mList:
-        n = mList.count(x);
-        if (n > 1 and not x in mulList):
-            mulList.append(x)
-            print("there are", n, "systems at", x)
-    return mulList
-
-
-def createMapSymbols(
-        p,
-        systemList,
-        mList,
-        defDict,
-):
-    symbolList = []
-    dupList = {}
-
-    systemOffsets = [
-        (0, 0),
-        (-30, 30),
-        (30, -30),
-        (-30, -30),
-        (30, 30),
-    ]
-
-    minX = p.get("minX", 1)
-    minY = p.get("minY", 1)
-
-    for system in systemList:
-        tweakOffset = (0, 0)
-        dupCount = 0
-
-        # Handle multiple star systems at the same absolute
-        # X/Y coordinate.
-        if system.mapPos in mList:
-            if system.mapPos in dupList:
-                dupCount = (
-                        dupList[system.mapPos] + 1
-                )
-            else:
-                dupCount = 1
-
-            dupList[system.mapPos] = dupCount
-
-        starOffset = [(0, 0)]
-
-        if system.nStars > 1:
-            starOffset = get_star_offset_list(
-                system.nStars
-            )
-
-            tweakOffset = get_tweak_offset(
-                system.stars
-            )
-
-        # Translate absolute map coordinates into coordinates
-        # relative to the current map minimum.
-        localX = (
-                system.mapPos[0]
-                - minX
-                + 1
-        )
-
-        localY = (
-                system.mapPos[1]
-                - minY
-                + 1
-        )
-
-        xPos = (
-                localX * 150
-                + systemOffsets[dupCount][0]
-                + tweakOffset[0]
-        )
-
-        yPos = (
-                localY * 150
-                + systemOffsets[dupCount][1]
-                + tweakOffset[1]
-        )
-
-        tooltipText = createSystemTooltipText(
-            system
-        )
-
-        data = (
-                '<g '
-                'class="star-system" '
-                f'data-system-name="{escape_svg_attribute(system.name)}" '
-                f'data-tooltip="{escape_svg_attribute(tooltipText)}" '
-                'transform="translate(%f,%f)">'
-                % (
-                    xPos * p2mm,
-                    yPos * p2mm,
-                )
-        )
-
-        # Keep track of the system centre for jump lines and names.
-        system.drawnPos = (
-            xPos - tweakOffset[0],
-            yPos - tweakOffset[1],
-        )
-
-        stars = sorted(
-            system.stars,
-            key=sort_spec_type_for_display,
-        )
-
-        for index, star in enumerate(stars):
-            data += create_symbol(
-                p,
-                star,
-                starOffset[index],
-                defDict,
-            )
-
-        if p["printZ"]:
-            height = 30
-
-            data += (
-                    '<text x="%f" y="%f" font-size="%d" '
-                    'font-family="Arial,Helvetica,sans-serif" '
-                    'fill="white">'
-                    % (
-                        20 * p["scale"] * p2mm,
-                        height * p["scale"] * p2mm,
-                        height * p2mm,
-                    )
-            )
-
-            if system.z > 0:
-                data += "+"
-
-            data += "%d</text>" % system.z
-
-        data += "</g>"
-        symbolList.append(data)
-
-    return symbolList
 
 def createMap(
         params,
@@ -424,11 +278,11 @@ if __name__ == '__main__':
     print("there are", len(starList), "systems on the map")
 
     # check for overlapping systems and flag
-    multipleList = findOverlaps(starList)
+    multipleList = find_overlaps(starList)
 
     defDict = {}  # dictionary of gradient definitions for star symbols in SVG file
     # generate symbols for each system
-    symbolList = createMapSymbols(p, starList, multipleList, defDict)
+    symbolList = create_map_symbols(p, starList, multipleList, defDict)
 
     # generate stellar distance data
     connectionList = find_connections(starList, jumpList)
@@ -441,31 +295,3 @@ if __name__ == '__main__':
 
     writeSystemData(p, starList)
     writeConnectionData(p, jumpList)
-
-def createSystemTooltipText(system):
-    """Create the tooltip text stored on a star system SVG group."""
-
-    lines = [
-        system.name,
-    ]
-
-    if system.faction:
-        lines.append(
-            f"Faction: {system.faction}"
-        )
-
-    lines.append(
-        f"Stars: {', '.join(system.stars)}"
-    )
-
-    if system.planets:
-        lines.append("")
-
-        for planet in system.planets:
-            lines.append(
-                f"{planet.name} — "
-                f"{planet.getTypeLabel()} — "
-                f"{planet.classification}"
-            )
-
-    return "\n".join(lines)

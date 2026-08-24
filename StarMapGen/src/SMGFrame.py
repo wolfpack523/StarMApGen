@@ -6,11 +6,15 @@ import wx.lib.scrolledpanel
 from loadData import loadData
 from makeMap import (
     createMap as writeSvgMap,
-    createMapSymbols,
     createSystems,
+)
+from systemRendering import (
+    create_map_symbols,
+    find_overlaps,
+)
+from jumpRendering import (
     find_connections,
     find_jumps,
-    findOverlaps,
 )
 from SMGMapPanel import SMGMapPanel
 from StarSystem import StarSystem
@@ -33,11 +37,6 @@ from MapParametersPanel import (
 )
 from RandomGenerationPanel import (
     RandomGenerationPanel,
-)
-
-from jumpRendering import (
-    find_connections,
-    find_jumps,
 )
 
 class SMGFrame(wx.Frame):
@@ -484,17 +483,17 @@ class SMGFrame(wx.Frame):
     def renderCurrentMap(self):
         """Create the SVG from the current in-memory map state."""
 
-        multipleList = findOverlaps(self.starList)
+        multipleList = find_overlaps(self.starList)
         definitionDictionary = {}
 
-        symbolList = createMapSymbols(
+        symbolList = create_map_symbols(
             self.params,
             self.starList,
             multipleList,
             definitionDictionary,
         )
 
-        # createMapSymbols sets drawnPos, which is required
+        # create_map_symbols sets drawnPos, which is required
         # by find_connections.
         connectionList = find_connections(
             self.starList,
