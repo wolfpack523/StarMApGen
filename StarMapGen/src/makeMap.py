@@ -20,8 +20,7 @@ from systemRendering import (
     create_map_symbols,
     find_overlaps,
 )
-
-p2mm = 0.26458333333  # /25.4/96
+from svgHelpers import P2MM
 
 
 def createSystems(p):
@@ -91,13 +90,13 @@ def createMap(
     width = (
             (map_width + 1)
             * 150
-            * p2mm
+            * P2MM
     )
 
     height = (
             (map_height + 1)
             * 150
-            * p2mm
+            * P2MM
     )
 
     with open(
@@ -254,12 +253,12 @@ def _write_grid(
 
         file.write(
             '<line '
-            f'x1="{x * p2mm:f}" '
-            f'y1="{y_min * p2mm:f}" '
-            f'x2="{x * p2mm:f}" '
-            f'y2="{y_max * p2mm:f}" '
+            f'x1="{x * P2MM:f}" '
+            f'y1="{y_min * P2MM:f}" '
+            f'x2="{x * P2MM:f}" '
+            f'y2="{y_max * P2MM:f}" '
             'style="stroke:rgb(100,100,100); '
-            f'stroke-width:{3 * p2mm:f}" />\n'
+            f'stroke-width:{3 * P2MM:f}" />\n'
         )
 
     for index in range(
@@ -273,12 +272,12 @@ def _write_grid(
 
         file.write(
             '<line '
-            f'x1="{x_min * p2mm:f}" '
-            f'y1="{y * p2mm:f}" '
-            f'x2="{x_max * p2mm:f}" '
-            f'y2="{y * p2mm:f}" '
+            f'x1="{x_min * P2MM:f}" '
+            f'y1="{y * P2MM:f}" '
+            f'x2="{x_max * P2MM:f}" '
+            f'y2="{y * P2MM:f}" '
             'style="stroke:rgb(100,100,100); '
-            f'stroke-width:{3 * p2mm:f}" />\n'
+            f'stroke-width:{3 * P2MM:f}" />\n'
         )
 
     file.write(

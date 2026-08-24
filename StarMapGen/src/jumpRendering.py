@@ -1,10 +1,7 @@
 import math
-from math import atan, acos, sin, cos, fabs
 
 from JumpLink import JumpLink
-
-
-P2MM = 0.26458333333
+from svgHelpers import P2MM
 
 
 JUMP_STATUS_STYLES = {
@@ -268,17 +265,17 @@ def draw_connections(params, file, connection_list):
 
         if x1 != x2:
             slope = (y1 - y2) / (x2 - x1)
-            angle = atan(-slope) * 180 / acos(-1.0)
+            angle = math.atan(-slope) * 180 / math.acos(-1.0)
 
-            x_scale = sin(
-                atan(slope) * 2
+            x_scale = math.sin(
+                math.atan(slope) * 2
             )
 
-            y_scale = cos(
-                atan(slope) * 2
+            y_scale = math.sin(
+                math.atan(slope) * 2
             )
 
-            if fabs(angle) >= 45.0:
+            if math.fabs(angle) >= 45.0:
                 x_scale = -x_scale
 
             if slope < 0:
@@ -289,7 +286,7 @@ def draw_connections(params, file, connection_list):
 
         if slope == 0:
             y_scale /= 2
-        elif fabs(angle) < 10:
+        elif math.fabs(angle) < 10:
             y_scale *= 0.8
 
         x_middle = (
