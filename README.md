@@ -42,7 +42,18 @@ daraus eine frei skalierbare SVG-Karte.
 - Systeminformationen und Planeten werden in der SVG-Ansicht beim Überfahren eines Systems angezeigt.
 - Die Kartenansicht wurde verbessert: Zoomen und Scrollposition bleiben beim Aktualisieren der SVG-Karte erhalten.
 
-Außerdem wurden zahlreiche kleinere Verbesserungen an der SVG-Erzeugung, Datenverarbeitung und Benutzeroberfläche vorgenommen.
+Außerdem wurde die interne Projektstruktur grundlegend überarbeitet.
+Benutzeroberfläche, Datenmodelle, Dateioperationen und SVG-Rendering sind
+nun klar voneinander getrennt, wodurch zukünftige Erweiterungen und
+Wartungsarbeiten erleichtert werden.
+
+
+## Bekannte Einschränkungen
+
+- Kartengrenzen können derzeit erweitert, aber nicht verkleinert werden.
+- Änderungen an Systemdaten und Planeten werden über `Apply Changes`
+  gespeichert, während Änderungen an Sprungverbindungen derzeit sofort
+  übernommen werden. Dieses Verhalten soll zukünftig vereinheitlicht werden.
 
 ## Programm starten
 
@@ -134,13 +145,7 @@ Bestimmt die durchschnittliche Anzahl der erzeugten Sternensysteme.
 
 Ein höherer Wert erzeugt mehr Systeme.
 
-Nach Eingabe der Werte:
-
-```text
-Generate Random Map
-```
-
-anklicken.
+Nach Eingabe der Werte:```Generate Random Map```anklicken.
 
 Die Karte wird erzeugt, als DAT-Datei gespeichert und als SVG dargestellt.
 
@@ -150,18 +155,8 @@ Den Bereich Map Files and Display öffnen.
 
 Unter Data Filename den Namen der zu ladenden Datei eintragen.
 
-Beispiel:
-
-```text
-sampleMap.dat
-```
-Danach:
-
-```text
-Load Map
-```
-
-anklicken.
+Beispiel:```sampleMap.dat```
+Danach:```Load Map```anklicken.
 
 Beim Laden werden folgende Daten übernommen:
 
@@ -187,21 +182,13 @@ vorhandenen Systempositionen.
 
 Name der zu erzeugenden SVG-Datei.
 
-Beispiel:
-
-```text
-sampleMap.svg
-```
+Beispiel:```sampleMap.svg```
 
 #### Data Filename
 
 Name der DAT-Datei, die geladen und gespeichert wird.
 
-Beispiel:
-
-```text
-sampleMap.dat
-```
+Beispiel:```sampleMap.dat```
 
 #### Text Scale
 
@@ -215,11 +202,7 @@ Legt fest, ob die Z-Koordinate an den Sternensystemen angezeigt wird.
 
 Die aktuelle SVG-Karte kann zusätzlich als PNG-Datei exportiert werden.
 
-Dazu im Bereich `Map Files and Display` auf
-
-```text
-Export PNG
-```
+Dazu im Bereich `Map Files and Display` auf ```Export PNG```
 klicken.
 
 Die PNG-Datei wird unter demselben Namen wie die SVG-Datei gespeichert.
@@ -290,25 +273,15 @@ Nach Auswahl eines Systems können folgende Werte bearbeitet werden:
 - Spektraltypen
 - Planeten
 
-Änderungen werden mit
-
-```text 
-Apply Changes
-```
-
-übernommen.
+Änderungen werden mit```Apply Changes```übernommen.
 
 Die Koordinaten müssen innerhalb der aktuellen Map Bounds liegen.
 
 Systemnamen müssen eindeutig sein.
 
-## Neues Sternensystem anlegen
+### Neues Sternensystem anlegen
 
-Auf
-```text
-New System
-```
-klicken.
+Auf```New System```klicken.
 
 StarMapGen vergibt automatisch einen fortlaufenden Systemnamen:
 
@@ -326,23 +299,11 @@ Andere Namen können anschließend manuell eingetragen werden.
 Gelöschte Nummern werden nicht erneut vergeben. Existiert beispielsweise
 bereits ```S010```, erhält das nächste System den Namen ```S011```.
 
-Position und Spektraltypen eintragen und anschließend
+Position und Spektraltypen eintragen und anschließend```Create System```anklicken.
 
-```text
-Create System
-```
+### Sternensystem löschen
 
-anklicken.
-
-## Sternensystem löschen
-
-Das zu löschende System auswählen und
-
-```text
-Delete System
-```
-
-anklicken.
+Das zu löschende System auswählen und```Delete System```anklicken.
 
 Alle Sprungverbindungen, die mit diesem System verbunden sind, werden
 ebenfalls entfernt.
@@ -352,11 +313,7 @@ ebenfalls entfernt.
 Mehrere Sterne können durch Kommas, Semikolons oder Zeilenumbrüche getrennt
 werden.
 
-Beispiel:
-
-```text
-G2, M4, WD
-```
+Beispiel:```G2, M4, WD```
 
 ### Hauptreihensterne
 
@@ -449,7 +406,7 @@ Folgende Planetentypen stehen zur Verfügung:
 - Vulkanische Welt
 - Sonstiger Planetentyp
 
-#Weltklassifizierungen
+### Weltklassifizierungen
 
 Zusätzlich zum physikalischen Planetentyp kann eine Weltklassifizierung vergeben werden.
 
@@ -529,11 +486,7 @@ Ein Nebel besitzt folgende Eigenschaften:
 ### Neuen Nebel anlegen
 
 
-Auf
-```text
-New Nebula
-```
-klicken.
+Auf```New Nebula```klicken.
 
 Anschließend Name, Stil, Farbe, Transparenz und mindestens drei
 Stützpunkte eintragen.
@@ -566,10 +519,8 @@ Folgende Darstellungsarten stehen zur Verfügung:
 
 Die Farbe wird als hexadezimaler RGB-Wert angegeben.
 
-Beispiel:
-```text
-#7a2f8f
-```
+Beispiel:```#7a2f8f```
+
 #### Opacity
 
 Die Transparenz wird als Wert zwischen ```0.0``` und ```1.0``` angegeben.
@@ -585,14 +536,10 @@ Ein kleiner Wert erzeugt einen transparenteren Nebel.
 
 #### Stützpunkte
 
-Jeder Punkt wird als X- und Y-Koordinate angegeben:
-```text
-x,y
-```
-Beispiel:
-```
-5,7
-```
+Jeder Punkt wird als X- und Y-Koordinate angegeben:```x,y```
+
+Beispiel:```5,7```
+
 Die Koordinaten müssen innerhalb der aktuellen Kartengrenzen liegen.
 
 Ein Nebel benötigt mindestens drei unterschiedliche Punkte.
@@ -703,20 +650,14 @@ dist\StarMapGen.exe
 
 ## Projektstruktur
 ```text
-StarMapGen/
-├── StarMapGen/
-│   └── src/
-│       ├── StarMapGen.py
-│       ├── SMGFrame.py
-│       ├── SMGMapPanel.py
-│       ├── StarSystem.py
-│       ├── JumpLink.py
-│       ├── Nebula.py
-│       ├── Planet.py
-│       ├── exportPng.py
-│       ├── loadData.py
-│       ├── writeData.py
-│       └── makeMap.py
+StarMapGen/src/
+├── StarMapGen.py
+├── domain/
+├── files/
+├── rendering/
+└── ui/
+│   ├── dialogs/
+│   └── panels/
 ├── build/
 ├── dist/
 └── README.md
