@@ -8,8 +8,8 @@ from makeMap import (
     createMap as writeSvgMap,
     createMapSymbols,
     createSystems,
-    findConnections,
-    findJumps,
+    find_connections,
+    find_jumps,
     findOverlaps,
 )
 from SMGMapPanel import SMGMapPanel
@@ -33,6 +33,11 @@ from MapParametersPanel import (
 )
 from RandomGenerationPanel import (
     RandomGenerationPanel,
+)
+
+from jumpRendering import (
+    find_connections,
+    find_jumps,
 )
 
 class SMGFrame(wx.Frame):
@@ -399,7 +404,7 @@ class SMGFrame(wx.Frame):
         StarSystem.id = 0
 
         starList = createSystems(params)
-        jumpList = findJumps(starList)
+        jumpList = find_jumps(starList)
 
         self.systemEditor.resetState()
 
@@ -490,8 +495,8 @@ class SMGFrame(wx.Frame):
         )
 
         # createMapSymbols sets drawnPos, which is required
-        # by findConnections.
-        connectionList = findConnections(
+        # by find_connections.
+        connectionList = find_connections(
             self.starList,
             self.jumpList,
         )
