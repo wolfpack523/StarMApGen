@@ -8,9 +8,10 @@ from JumpLinkDialog import (
     JumpLinkDialog,
     JUMP_STATUS_OPTIONS,
 )
-from Planet import Planet
-from PlanetDialog import PlanetDialog
 from StarSystem import StarSystem
+from PlanetEditorPanel import (
+    PlanetEditorPanel,
+)
 
 JUMP_STATUS_LABELS = dict(
     JUMP_STATUS_OPTIONS
@@ -323,135 +324,19 @@ class SystemEditorPanel(wx.Panel):
             5,
             )
 
-        editor_sizer.Add(
-            wx.StaticText(
+        self.planetEditor = (
+            PlanetEditorPanel(
                 self,
-                label="Planets:",
-            ),
-            0,
-            wx.LEFT | wx.RIGHT | wx.TOP,
-            5,
+                self.onPlanetEditorChanged,
+                self.SetStatusText,
             )
-
-        self.planetListControl = wx.ListCtrl(
-            self,
-            size=(-1, 120),
-            style=(
-                    wx.LC_REPORT
-                    | wx.LC_SINGLE_SEL
-                    | wx.BORDER_SUNKEN
-            ),
-        )
-
-        self.planetListControl.InsertColumn(
-            0,
-            "Planet",
-            width=190,
-        )
-
-        self.planetListControl.InsertColumn(
-            1,
-            "Type",
-            width=120,
-        )
-
-        self.planetListControl.InsertColumn(
-            2,
-            "Classification",
-            width=160,
-        )
-
-        self.planetListControl.Bind(
-            wx.EVT_LIST_ITEM_SELECTED,
-            self.onPlanetSelectionChanged,
-        )
-
-        self.planetListControl.Bind(
-            wx.EVT_LIST_ITEM_DESELECTED,
-            self.onPlanetSelectionChanged,
-        )
-
-        self.planetListControl.Bind(
-            wx.EVT_LIST_ITEM_ACTIVATED,
-            self.editPlanet,
         )
 
         editor_sizer.Add(
-            self.planetListControl,
+            self.planetEditor,
             0,
-            wx.LEFT
-            | wx.RIGHT
-            | wx.BOTTOM
-            | wx.EXPAND,
-            5,
-            )
-
-        planet_button_sizer = wx.BoxSizer(
-            wx.HORIZONTAL
+            wx.EXPAND,
         )
-
-        self.addPlanetButton = wx.Button(
-            self,
-            label="Add Planet",
-        )
-
-        self.addPlanetButton.Bind(
-            wx.EVT_BUTTON,
-            self.addPlanet,
-        )
-
-        planet_button_sizer.Add(
-            self.addPlanetButton,
-            0,
-            wx.RIGHT,
-            5,
-        )
-
-        self.editPlanetButton = wx.Button(
-            self,
-            label="Edit Planet",
-        )
-
-        self.editPlanetButton.Bind(
-            wx.EVT_BUTTON,
-            self.editPlanet,
-        )
-
-        self.editPlanetButton.Disable()
-
-        planet_button_sizer.Add(
-            self.editPlanetButton,
-            0,
-            wx.RIGHT,
-            5,
-        )
-
-        self.removePlanetButton = wx.Button(
-            self,
-            label="Remove Planet",
-        )
-
-        self.removePlanetButton.Bind(
-            wx.EVT_BUTTON,
-            self.removePlanet,
-        )
-
-        self.removePlanetButton.Disable()
-
-        planet_button_sizer.Add(
-            self.removePlanetButton,
-            0,
-        )
-
-        editor_sizer.Add(
-            planet_button_sizer,
-            0,
-            wx.LEFT
-            | wx.RIGHT
-            | wx.BOTTOM
-            | wx.ALIGN_RIGHT,
-            5,
-            )
 
         editor_sizer.Add(
             wx.StaticText(
@@ -683,6 +568,9 @@ class SystemEditorPanel(wx.Panel):
             panel_sizer
         )
 
+    def onPlanetEditorChanged(self):
+        self.applySystemButton.Enable()
+
     def refreshSystemEditor(self, selected_index=0):
         """Refresh the system list from the current map state."""
 
@@ -757,16 +645,9 @@ class SystemEditorPanel(wx.Panel):
             ", ".join(system.stars)
         )
 
-        self.editedPlanets = [
-            Planet(
-                name=planet.name,
-                planetType=planet.planetType,
-                classification=planet.classification,
-            )
-            for planet in system.planets
-        ]
-
-        self.refreshPlanetEditor()
+        self.planetEditor.setPlanets(
+            system.planets
+        )
 
         self.randomizeSpectralTypesButton.Enable()
 
@@ -777,7 +658,9 @@ class SystemEditorPanel(wx.Panel):
         )
         self.applySystemButton.Enable()
         self.deleteSystemButton.Enable()
-        self.addPlanetButton.Enable()
+        self.planetEditor.setEnabled(
+            True
+        )
 
     def beginNewSystem(self, event):
         """Switch the editor into creation mode."""
@@ -848,10 +731,13 @@ class SystemEditorPanel(wx.Panel):
 
         self.randomizeSpectralTypesButton.Enable()
 
-        self.editedPlanets = []
+        self.planetEditor.setPlanets(
+            []
+        )
 
-        self.refreshPlanetEditor()
-        self.addPlanetButton.Enable()
+        self.planetEditor.setEnabled(
+            True
+        )
 
         # A new system may be linked to any existing system.
         self.refreshJumpEditor(None)
@@ -1176,14 +1062,10 @@ class SystemEditorPanel(wx.Panel):
             "y": y,
             "z": z,
             "stars": spectral_types,
-            "planets": [
-                Planet(
-                    name=planet.name,
-                    planetType=planet.planetType,
-                    classification=planet.classification,
-                )
-                for planet in self.editedPlanets
-            ],
+            "planets": (
+                self.planetEditor
+                .getPlanets()
+            ),
         }
 
     def applyValuesToSystem(self, system, values):
@@ -1208,7 +1090,7 @@ class SystemEditorPanel(wx.Panel):
     def validateSystemName(
             self,
             value,
-            selectedIndex=wx.NOT_FOUND,
+            selected_index=wx.NOT_FOUND,
     ):
         """Return a valid and unique system name."""
 
@@ -1226,7 +1108,7 @@ class SystemEditorPanel(wx.Panel):
 
         for index, system in enumerate(self.starList):
             if (
-                    index != selectedIndex
+                    index != selected_index
                     and system.name == name
             ):
                 raise ValueError(
@@ -1504,231 +1386,13 @@ G2, M4, WD
         self.removeJumpButton.Disable()
         self.editedPlanets = []
 
-        self.planetListControl.DeleteAllItems()
-        self.addPlanetButton.Disable()
-        self.editPlanetButton.Disable()
-        self.removePlanetButton.Disable()
+        self.planetEditor.clear()
 
         self.cancelSystemButton.Disable()
         self.applySystemButton.Disable()
         self.cancelSystemButton.Disable()
 
         self.newSystemButton.Enable(bool(self.params))
-
-
-    def refreshPlanetEditor(self):
-        """Refresh the temporary planet list."""
-
-        self.planetListControl.DeleteAllItems()
-
-        for planet in self.editedPlanets:
-            row = self.planetListControl.InsertItem(
-                self.planetListControl.GetItemCount(),
-                planet.name,
-            )
-
-            self.planetListControl.SetItem(
-                row,
-                1,
-                planet.getTypeLabel(),
-            )
-
-            self.planetListControl.SetItem(
-                row,
-                2,
-                planet.classification,
-            )
-
-        self.updatePlanetButtons()
-
-    def onPlanetSelectionChanged(
-            self,
-            event,
-    ):
-        """Update planet buttons after selecting a row."""
-
-        self.updatePlanetButtons()
-
-        event.Skip()
-
-    def updatePlanetButtons(self):
-        """Enable planet actions according to the selection."""
-
-        selected_index = (
-            self.planetListControl
-            .GetFirstSelected()
-        )
-
-        has_selection = (
-                selected_index != -1
-        )
-
-        self.editPlanetButton.Enable(
-            has_selection
-        )
-
-        self.removePlanetButton.Enable(
-            has_selection
-        )
-
-    def validatePlanetName(
-            self,
-            name,
-            ignored_index=-1,
-    ):
-        """Validate a planet name inside the current system."""
-
-        name = name.strip()
-
-        if not name:
-            raise ValueError(
-                "The planet name must not be empty."
-            )
-
-        if '"' in name:
-            raise ValueError(
-                'The planet name must not contain a double quote (").'
-            )
-
-        for index, planet in enumerate(
-                self.editedPlanets
-        ):
-            if (
-                    index != ignored_index
-                    and planet.name.casefold()
-                    == name.casefold()
-            ):
-                raise ValueError(
-                    f'A planet named "{name}" already exists '
-                    "in this system."
-                )
-
-        return name
-
-    def addPlanet(self, event):
-        """Add a planet to the current editor state."""
-
-        dialog = PlanetDialog(
-            self,
-            title="Add Planet",
-        )
-
-        try:
-            if dialog.ShowModal() != wx.ID_OK:
-                return
-
-            try:
-                name = self.validatePlanetName(
-                    dialog.getPlanetName()
-                )
-            except ValueError as error:
-                wx.MessageBox(
-                    str(error),
-                    "Invalid Planet",
-                    wx.OK | wx.ICON_ERROR,
-                    self,
-                    )
-                return
-
-            self.editedPlanets.append(
-                Planet(
-                    name=name,
-                    planetType=dialog.getPlanetType(),
-                    classification=dialog.getClassification(),
-                )
-            )
-
-            self.applySystemButton.Enable()
-
-            self.SetStatusText(
-                "Planet list changed. Use Apply Changes to save."
-            )
-
-            self.refreshPlanetEditor()
-
-        finally:
-            dialog.Destroy()
-
-    def editPlanet(self, event):
-        """Edit the selected planet."""
-
-        index = (
-            self.planetListControl
-            .GetFirstSelected()
-        )
-
-        if index == -1:
-            return
-
-        planet = self.editedPlanets[index]
-
-        dialog = PlanetDialog(
-            self,
-            planet=planet,
-            title="Edit Planet",
-        )
-
-        try:
-            if dialog.ShowModal() != wx.ID_OK:
-                return
-
-            try:
-                name = self.validatePlanetName(
-                    dialog.getPlanetName(),
-                    ignored_index=index,
-                )
-            except ValueError as error:
-                wx.MessageBox(
-                    str(error),
-                    "Invalid Planet",
-                    wx.OK | wx.ICON_ERROR,
-                    self,
-                    )
-                return
-
-            planet.name = name
-            planet.planetType = (
-                dialog.getPlanetType()
-            )
-
-            planet.classification = (
-                dialog.getClassification()
-            )
-
-            self.applySystemButton.Enable()
-
-            self.SetStatusText(
-                "Planet list changed. Use Apply Changes to save."
-            )
-
-            self.planetListControl.Select(
-                index
-            )
-            self.refreshPlanetEditor()
-
-        finally:
-            dialog.Destroy()
-
-    def removePlanet(self, event):
-        """Remove the selected planet from the editor."""
-
-        index = (
-            self.planetListControl
-            .GetFirstSelected()
-        )
-
-        if index == -1:
-            return
-
-        del self.editedPlanets[index]
-
-        self.applySystemButton.Enable()
-
-        self.SetStatusText(
-            "Planet list changed. Use Apply Changes to save."
-        )
-
-        self.refreshPlanetEditor()
 
     def refreshJumpEditor(self, system_name):
         """Display the jump links belonging to one system."""
@@ -2090,5 +1754,5 @@ G2, M4, WD
             wx.NOT_FOUND
         )
 
-        self.editedPlanets = []
+        self.planetEditor.clear()
         self.displayedJumpLinks = []
