@@ -1,9 +1,7 @@
 import threading
 
 import wx
-import wx.lib.intctrl
 import wx.lib.scrolledpanel
-from wx.lib.masked import NumCtrl
 
 from loadData import loadData
 from makeMap import (
@@ -79,7 +77,7 @@ class SMGFrame(wx.Frame):
             expanded=True,
         )
 
-        self.mapFilesPanel = (
+        self.mapParametersPanel = (
             MapParametersPanel(
                 filesParent,
                 self,
@@ -87,13 +85,13 @@ class SMGFrame(wx.Frame):
         )
         
         filesSizer.Add(
-            self.mapFilesPanel,
+            self.mapParametersPanel,
             1,
             wx.EXPAND,
         )
 
         (
-            self.mapBoundsPanel,
+            self.mapBoundsPane,
             boundsParent,
             boundsSizer,
         ) = self.createCollapsibleSection(
@@ -343,6 +341,12 @@ class SMGFrame(wx.Frame):
 
         self.mainSizer.Layout()
 
+    def onResize(self, event):
+        self.Update()
+        self.Refresh()
+        event.Skip()
+
+
     def generateMap(self, event):
         """Generate a new random star map."""
 
@@ -380,13 +384,69 @@ class SMGFrame(wx.Frame):
         self.renderCurrentMap()
         self.saveCurrentMap()
         self.drawMap(self.params["filename"])
-        self.refreshSystemEditor()
-        self.refreshNebulaEditor()
-        self.refreshExportControls()
-        self.refreshMapBounds()
+        self.refreshMapControls()
 
         self.SetStatusText(
             f"{len(self.starList)} star systems were randomly generated."
+        )
+
+    def loadMap(self, event):
+        """Load an existing star map from the configured DAT file."""
+
+        params = self.createParamDict()
+        dataFilename = params["datafile"]
+
+        if not dataFilename:
+            wx.MessageBox(
+                "Enter the DAT file that should be loaded.",
+                "Missing Data Filename",
+                wx.OK | wx.ICON_INFORMATION,
+                )
+            return
+
+        if not params["filename"]:
+            wx.MessageBox(
+                "Enter an output map filename for the generated SVG.",
+                "Missing Map Filename",
+                wx.OK | wx.ICON_INFORMATION,
+                )
+            return
+
+        loadedStarList = []
+        loadedJumpList = []
+        loadedNebulaList = []
+
+        try:
+            loadData(
+                dataFilename,
+                params,
+                loadedStarList,
+                loadedJumpList,
+                loadedNebulaList
+
+            )
+        except (OSError, ValueError) as error:
+            wx.MessageBox(
+                str(error),
+                "Unable to Load Map",
+                wx.OK | wx.ICON_ERROR,
+                )
+            return
+
+        self.systemEditor.resetState()
+
+        self.params = params
+        self.starList = loadedStarList
+        self.jumpList = loadedJumpList
+        self.nebulaList = loadedNebulaList
+
+        self.renderCurrentMap()
+        self.drawMap(self.params["filename"])
+        self.refreshMapControls()
+
+        self.SetStatusText(
+            f"{len(self.starList)} star systems were loaded "
+            f'from "{dataFilename}".'
         )
 
     def renderCurrentMap(self):
@@ -454,101 +514,11 @@ class SMGFrame(wx.Frame):
         self.drawMap(self.params["filename"])
         self.refreshMapBounds()
 
-
-
-    def hasCurrentMapBounds(self):
-        """Return whether the current map has complete bounds."""
-
-        requiredKeys = (
-            "minX",
-            "maxX",
-            "minY",
-            "maxY",
-            "minZ",
-            "maxZ",
-        )
-
-        return (
-                bool(self.params)
-                and all(
-                    key in self.params
-                    for key in requiredKeys
-                )
-            )
-
     def drawMap(self, file):
         self.mapPanel.setMap(file)
         self.mainSizer.Layout()
         self.Update()
         self.Refresh()
-
-    def onResize(self, event):
-        self.Update()
-        self.Refresh()
-        event.Skip()
-
-
-    def loadMap(self, event):
-        """Load an existing star map from the configured DAT file."""
-
-        params = self.createParamDict()
-        dataFilename = params["datafile"]
-
-        if not dataFilename:
-            wx.MessageBox(
-                "Enter the DAT file that should be loaded.",
-                "Missing Data Filename",
-                wx.OK | wx.ICON_INFORMATION,
-            )
-            return
-
-        if not params["filename"]:
-            wx.MessageBox(
-                "Enter an output map filename for the generated SVG.",
-                "Missing Map Filename",
-                wx.OK | wx.ICON_INFORMATION,
-            )
-            return
-
-        loadedStarList = []
-        loadedJumpList = []
-        loadedNebulaList = []
-
-        try:
-            loadData(
-                dataFilename,
-                params,
-                loadedStarList,
-                loadedJumpList,
-                loadedNebulaList
-
-            )
-        except (OSError, ValueError) as error:
-            wx.MessageBox(
-                str(error),
-                "Unable to Load Map",
-                wx.OK | wx.ICON_ERROR,
-            )
-            return
-
-        self.systemEditor.resetState()
-
-        self.params = params
-        self.starList = loadedStarList
-        self.jumpList = loadedJumpList
-        self.nebulaList = loadedNebulaList
-
-        self.renderCurrentMap()
-        self.drawMap(self.params["filename"])
-        self.refreshSystemEditor()
-        self.refreshNebulaEditor()
-        self.refreshExportControls()
-        self.refreshMapBounds()
-
-        self.SetStatusText(
-            f"{len(self.starList)} star systems were loaded "
-            f'from "{dataFilename}".'
-        )
 
     def onExportPng(self, event):
         """Export the current SVG map to PNG in a background thread."""
@@ -627,7 +597,7 @@ class SMGFrame(wx.Frame):
                 "PNG Export Error",
                 wx.OK | wx.ICON_ERROR,
                 self,
-            )
+                )
 
             return
 
@@ -635,11 +605,39 @@ class SMGFrame(wx.Frame):
             f"PNG exported: {pngFile}"
         )
 
+    def hasCurrentMapBounds(self):
+        """Return whether the current map has complete bounds."""
+
+        requiredKeys = (
+            "minX",
+            "maxX",
+            "minY",
+            "maxY",
+            "minZ",
+            "maxZ",
+        )
+
+        return (
+                bool(self.params)
+                and all(
+                    key in self.params
+                    for key in requiredKeys
+                )
+            )
+
     def createParamDict(self):
         return (
-            self.mapFilesPanel
+            self.mapParametersPanel
             .createParamDict()
         )
+
+    def refreshMapControls(self):
+        """Refresh all controls that depend on the current map."""
+
+        self.refreshSystemEditor()
+        self.refreshNebulaEditor()
+        self.refreshExportControls()
+        self.refreshMapBounds()
 
     def refreshSystemEditor(
             self,
@@ -667,4 +665,4 @@ class SMGFrame(wx.Frame):
         self.mapBoundsPanel.refreshMapBoundsControls()
 
     def refreshExportControls(self):
-        self.mapFilesPanel.refreshExportControls()
+        self.mapParametersPanel.refreshExportControls()
