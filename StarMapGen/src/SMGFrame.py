@@ -30,6 +30,9 @@ from NebulaEditorPanel import (
     NebulaEditorPanel,
 )
 from MapBoundsPanel import MapBoundsPanel
+from MapParametersPanel import (
+    MapParametersPanel,
+)
 
 class SMGFrame(wx.Frame):
     def __init__(self):
@@ -65,9 +68,28 @@ class SMGFrame(wx.Frame):
         # All actual input controls are placed in this sizer.
         inputSizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.createParameterControls(
+        (
+            self.mapFilesPane,
+            filesParent,
+            filesSizer,
+        ) = self.createCollapsibleSection(
             self.inputPanel,
             inputSizer,
+            "Map Files and Display",
+            expanded=True,
+        )
+
+        self.mapFilesPanel = (
+            MapParametersPanel(
+                filesParent,
+                self,
+            )
+        )
+        
+        filesSizer.Add(
+            self.mapFilesPanel,
+            1,
+            wx.EXPAND,
         )
 
         (
@@ -195,8 +217,6 @@ class SMGFrame(wx.Frame):
             5,
         )
 
-        self.setDefaults()
-
         mainPanel.SetSizer(
             self.mainSizer
         )
@@ -322,277 +342,6 @@ class SMGFrame(wx.Frame):
         self.updateInputPanelMinimumWidth()
 
         self.mainSizer.Layout()
-
-    def createParameterControls(
-            self,
-            parent,
-            inputSizer,
-    ):
-        """Create collapsible file and random generation sections."""
-
-        def addControlRow(
-                sectionParent,
-                sectionSizer,
-                label,
-                control,
-        ):
-            row = wx.BoxSizer(
-                wx.HORIZONTAL
-            )
-
-            row.Add(
-                wx.StaticText(
-                    sectionParent,
-                    label=label,
-                ),
-                0,
-                wx.ALIGN_CENTER_VERTICAL
-                | wx.RIGHT,
-                8,
-            )
-
-            row.Add(
-                control,
-                1,
-                wx.EXPAND,
-            )
-
-            sectionSizer.Add(
-                row,
-                0,
-                wx.ALL | wx.EXPAND,
-                5,
-            )
-
-        # ------------------------------------------------------------
-        # Map files and display
-        # ------------------------------------------------------------
-
-        (
-            self.mapFilesPane,
-            filesParent,
-            filesSizer,
-        ) = self.createCollapsibleSection(
-            parent,
-            inputSizer,
-            "Map Files and Display",
-            expanded=True,
-        )
-
-        self.textScale = NumCtrl(
-            filesParent,
-            min=0.25,
-            fractionWidth=2,
-        )
-
-        addControlRow(
-            filesParent,
-            filesSizer,
-            "Text Scale:",
-            self.textScale,
-        )
-
-        self.outMapName = wx.TextCtrl(
-            filesParent
-        )
-
-        addControlRow(
-            filesParent,
-            filesSizer,
-            "Output Map Filename:",
-            self.outMapName,
-        )
-
-        self.dataName = wx.TextCtrl(
-            filesParent
-        )
-
-        addControlRow(
-            filesParent,
-            filesSizer,
-            "Data Filename:",
-            self.dataName,
-        )
-
-        printZRow = wx.BoxSizer(
-            wx.HORIZONTAL
-        )
-
-        printZRow.Add(
-            wx.StaticText(
-                filesParent,
-                label="Print Z coordinate:",
-            ),
-            1,
-            wx.ALIGN_CENTER_VERTICAL,
-        )
-
-        self.printZ = wx.CheckBox(
-            filesParent
-        )
-
-        printZRow.Add(
-            self.printZ,
-            0,
-            wx.ALIGN_CENTER_VERTICAL,
-        )
-
-        filesSizer.Add(
-            printZRow,
-            0,
-            wx.ALL | wx.EXPAND,
-            5,
-        )
-
-        fileButtonSizer = wx.BoxSizer(
-            wx.HORIZONTAL
-        )
-
-        loadButton = wx.Button(
-            filesParent,
-            label="Load Map",
-        )
-
-        loadButton.Bind(
-            wx.EVT_BUTTON,
-            self.loadMap,
-        )
-
-        fileButtonSizer.Add(
-            loadButton,
-            0,
-            wx.RIGHT,
-            5,
-        )
-
-        self.exportPngButton = wx.Button(
-            filesParent,
-            label="Export PNG",
-        )
-
-        self.exportPngButton.Bind(
-            wx.EVT_BUTTON,
-            self.onExportPng,
-        )
-
-        self.exportPngButton.Disable()
-
-        fileButtonSizer.Add(
-            self.exportPngButton,
-            0,
-            wx.RIGHT,
-            5,
-        )
-
-        resetButton = wx.Button(
-            filesParent,
-            label="Reset Values",
-        )
-
-        resetButton.Bind(
-            wx.EVT_BUTTON,
-            self.resetParameters,
-        )
-
-        fileButtonSizer.Add(
-            resetButton,
-            0,
-        )
-
-        filesSizer.Add(
-            fileButtonSizer,
-            0,
-            wx.ALL | wx.ALIGN_RIGHT,
-            5,
-        )
-
-        # ------------------------------------------------------------
-        # Random generation
-        # ------------------------------------------------------------
-
-        (
-            self.randomGenerationPane,
-            randomParent,
-            randomSizer,
-        ) = self.createCollapsibleSection(
-            parent,
-            inputSizer,
-            "Random Generation",
-            expanded=False,
-        )
-
-        self.xSize = wx.lib.intctrl.IntCtrl(
-            randomParent,
-            min=1,
-        )
-
-        addControlRow(
-            randomParent,
-            randomSizer,
-            "Map Width (x):",
-            self.xSize,
-        )
-
-        self.ySize = wx.lib.intctrl.IntCtrl(
-            randomParent,
-            min=1,
-        )
-
-        addControlRow(
-            randomParent,
-            randomSizer,
-            "Map Height (y):",
-            self.ySize,
-        )
-
-        self.zSize = wx.lib.intctrl.IntCtrl(
-            randomParent,
-            min=1,
-        )
-
-        addControlRow(
-            randomParent,
-            randomSizer,
-            "Map Thickness (z):",
-            self.zSize,
-        )
-
-        self.stellarDensity = NumCtrl(
-            randomParent,
-            min=0,
-            fractionWidth=4,
-        )
-
-        addControlRow(
-            randomParent,
-            randomSizer,
-            "Stellar Density:",
-            self.stellarDensity,
-        )
-
-        generateButton = wx.Button(
-            randomParent,
-            label="Generate Random Map",
-        )
-
-        generateButton.Bind(
-            wx.EVT_BUTTON,
-            self.generateMap,
-        )
-
-        randomSizer.Add(
-            generateButton,
-            0,
-            wx.ALL | wx.ALIGN_RIGHT,
-            5,
-        )
-
-
-
-
-
-
-
 
     def generateMap(self, event):
         """Generate a new random star map."""
@@ -722,77 +471,10 @@ class SMGFrame(wx.Frame):
         return (
                 bool(self.params)
                 and all(
-            key in self.params
-            for key in requiredKeys
-        )
-        )
-
-
-
-
-
-    def resetParameters(self, event):
-        self.setDefaults()
-        self.exportPngButton.Disable()
-        self.SetStatusText(
-            "Map parameters reset."
-        )
-
-    def setDefaults(self):
-        self.xSize.SetValue(20)
-        self.ySize.SetValue(20)
-        self.zSize.SetValue(20)
-        self.stellarDensity.SetValue(0.004)
-        self.textScale.SetValue(1)
-        self.outMapName.SetValue("sampleMap.svg")
-        self.dataName.SetValue("sampleMap.dat")
-        self.printZ.SetValue(True)
-
-    def createParamDict(self):
-        """Create parameters for generating a new random map."""
-
-        params = {}
-
-        # New randomly generated maps begin at X=1 and Y=1.
-        params["minX"] = 1
-        params["maxX"] = self.xSize.GetValue()
-
-        params["minY"] = 1
-        params["maxY"] = self.ySize.GetValue()
-
-        zValue = self.zSize.GetValue() // 2
-
-        params["minZ"] = -zValue
-        params["maxZ"] = zValue
-
-        if self.zSize.GetValue() % 2 == 0:
-            params["minZ"] += 1
-
-        params["stellarDensity"] = (
-            self.stellarDensity.GetValue()
-        )
-
-        params["filename"] = (
-            self.outMapName.GetValue().strip()
-        )
-
-        params["datafile"] = (
-            self.dataName.GetValue().strip()
-        )
-
-        params["scale"] = (
-            self.textScale.GetValue()
-        )
-
-        params["printZ"] = (
-            self.printZ.GetValue()
-        )
-
-        return params
-
-
-
-
+                    key in self.params
+                    for key in requiredKeys
+                )
+            )
 
     def drawMap(self, file):
         self.mapPanel.setMap(file)
@@ -881,7 +563,9 @@ class SMGFrame(wx.Frame):
         if not svgFile:
             return
 
-        self.exportPngButton.Disable()
+        self.mapParametersPanel.setExportEnabled(
+            False
+        )
 
         self.SetStatusText(
             "Exporting PNG..."
@@ -929,7 +613,7 @@ class SMGFrame(wx.Frame):
     ):
         """Update the UI after PNG export."""
 
-        self.exportPngButton.Enable(
+        self.mapParametersPanel.setExportEnabled(
             bool(self.params)
         )
 
@@ -951,11 +635,10 @@ class SMGFrame(wx.Frame):
             f"PNG exported: {pngFile}"
         )
 
-    def refreshExportControls(self):
-        """Enable export controls when a map exists."""
-
-        self.exportPngButton.Enable(
-            bool(self.params)
+    def createParamDict(self):
+        return (
+            self.mapFilesPanel
+            .createParamDict()
         )
 
     def refreshSystemEditor(
@@ -982,3 +665,6 @@ class SMGFrame(wx.Frame):
 
     def refreshMapBounds(self):
         self.mapBoundsPanel.refreshMapBoundsControls()
+
+    def refreshExportControls(self):
+        self.mapFilesPanel.refreshExportControls()
