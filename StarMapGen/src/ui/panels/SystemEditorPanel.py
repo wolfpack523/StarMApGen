@@ -4,11 +4,11 @@ import re
 import wx
 from wx import StaticBoxSizer
 
-from StarSystem import StarSystem
-from PlanetEditorPanel import (
+from domain.StarSystem import StarSystem
+from ui.panels.PlanetEditorPanel import (
     PlanetEditorPanel,
 )
-from JumpLinkEditorPanel import (
+from ui.panels.JumpLinkEditorPanel import (
     JumpLinkEditorPanel,
 )
 

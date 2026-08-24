@@ -1,6 +1,6 @@
 import wx
 
-from Planet import Planet
+from domain.Planet import Planet
 
 
 class PlanetDialog(wx.Dialog):

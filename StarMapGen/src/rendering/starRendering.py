@@ -1,4 +1,4 @@
-from svgHelpers import P2MM
+from rendering.svgHelpers import P2MM
 
 
 def get_params2(sp_type):

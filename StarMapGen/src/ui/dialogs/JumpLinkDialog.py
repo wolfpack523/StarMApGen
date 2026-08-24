@@ -1,6 +1,6 @@
 import wx
 
-from JumpLink import JumpLink
+from domain.JumpLink import JumpLink
 
 
 JUMP_STATUS_OPTIONS = [

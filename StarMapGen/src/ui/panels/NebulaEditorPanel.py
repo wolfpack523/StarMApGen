@@ -3,7 +3,7 @@ import re
 import wx
 from wx.lib.masked import NumCtrl
 
-from Nebula import Nebula
+from domain.Nebula import Nebula
 
 
 class NebulaEditorPanel(wx.Panel):

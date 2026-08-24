@@ -1,7 +1,7 @@
 import math
 
-from JumpLink import JumpLink
-from svgHelpers import P2MM
+from domain.JumpLink import JumpLink
+from rendering.svgHelpers import P2MM
 
 
 JUMP_STATUS_STYLES = {

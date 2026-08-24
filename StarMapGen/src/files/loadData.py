@@ -1,9 +1,9 @@
 import re
 
-from JumpLink import JumpLink
-from Nebula import Nebula
-from StarSystem import StarSystem
-from Planet import Planet
+from domain.JumpLink import JumpLink
+from domain.Nebula import Nebula
+from domain.StarSystem import StarSystem
+from domain.Planet import Planet
 
 SYSTEM_NAME_PATTERN = re.compile(
     r"^Name:\s*(.*)$"
