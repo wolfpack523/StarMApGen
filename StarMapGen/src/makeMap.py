@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 from StarSystem import StarSystem
+from starRendering import (
+    create_symbol,
+    get_star_offset_list,
+    get_tweak_offset,
+    sort_spec_type_for_display,
+)
 
 p2mm = 0.26458333333  # /25.4/96
 
@@ -13,230 +19,6 @@ from nebulaRendering import (
     write_nebulae,
 )
 
-def createDef(spType, starData, dDict):
-    """Create the gradient definitions for the star symbols
-
-    Each star symbol consists of three components that each is
-    a unique color and gradient.  The colors are based on the
-    spectral type of the star but the gradients are the same
-    regardless of spectral type.  This function creates the gradient
-    information and returns the gradient names to be used.
-
-    To help minimize the size of the resultant SVG file, gradients
-    are only generated for the spectral types that will be on the
-    map.  The gradients are stored in a dictionary, indexed by
-    an ID based on the spectral type of the star.  This dictionary
-    is passed in as one of the parameters and if the requested
-    gradient is already there, the function simply returns the list
-    of gradients to use for the specified star.
-
-    Inputs:
-     - spType - The spectral type of the star
-     - starData - A list containing information about the size of
-                  the star symbol and the colors to be used
-     - dDict - the definition dictionary that will hold the
-               definition information
-
-    Outputs:
-     - gList - a list of the three gradients needed for the
-               specified star.
-    """
-    g1 = "rg" + spType + "a"
-    g2 = "rg" + spType + "b"
-    g3 = "rg" + spType + "c"
-
-    gList = [g1, g2, g3]
-    if g1 not in dDict:
-        color = interpolateColors(spType, 0)
-        #		print ("Adding " + g1 + " definition")
-        r1 = 100 * starData[0]
-        s1 = '  <radialGradient id="%s" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="%f">\n' % (g1, r1)
-        s1 += '   <stop stop-color="%s" offset="0"/>\n' % (color)
-        s1 += '   <stop stop-color="%s" stop-opacity="0" offset="1"/>\n' % (color)
-        s1 += '  </radialGradient>\n'
-        dDict[g1] = s1
-
-    if g2 not in dDict:
-        color = interpolateColors(spType, 1)
-        #		print ("Adding " + g2 + " definition")
-        r2 = 56.25 * starData[0]
-        s2 = '  <radialGradient id="%s" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="%f">\n' % (g2, r2)
-        s2 += '   <stop stop-color="%s" offset="0"/>\n' % (color)
-        s2 += '   <stop stop-color="%s" offset="0.54545"/>\n' % (color)
-        s2 += '   <stop stop-color="%s" stop-opacity="0" offset="1"/>\n' % (color)
-        s2 += '  </radialGradient>\n'
-        dDict[g2] = s2
-
-    if g3 not in dDict:
-        color = interpolateColors(spType, 2)
-        #		print ("Adding " + g3 + " definition")
-        r3 = 50 * starData[0]
-        s3 = '  <radialGradient id="%s" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="%f">\n' % (g3, r3)
-        s3 += '   <stop stop-color="%s" offset="0"/>\n' % (color)
-        s3 += '   <stop stop-color="%s" stop-opacity=".86432" offset="0.5"/>\n' % (color)
-        s3 += '   <stop stop-color="%s" stop-opacity="0" offset="1"/>\n' % (color)
-        s3 += '  </radialGradient>\n'
-        dDict[g3] = s3
-
-    return gList
-
-
-def interpolateColors(sp, index):
-    spVal = specTypeToValue(sp)
-    (low, high) = getBracketValues(spVal)
-    val = spVal % 10
-    lParams = getParams2(low)
-    hParams = getParams2(high)
-    c1 = lParams[1][index]
-    c2 = hParams[1][index]
-    r1 = int(c1[1:3], 16)
-    r2 = int(c2[1:3], 16)
-    g1 = int(c1[3:5], 16)
-    g2 = int(c2[3:5], 16)
-    b1 = int(c1[5:7], 16)
-    b2 = int(c2[5:7], 16)
-    r = hex(r1 + (r2 - r1) // 10 * val)
-    g = hex(g1 + (g2 - g1) // 10 * val)
-    b = hex(b1 + (b2 - b1) // 10 * val)
-    color = "#" + r[2:4] + g[2:4] + b[2:4]
-    if (len(color) == 6): color += "0"
-    return color
-
-
-def createSymbol(p, spType, pos, dDict):
-    scale = p['scale'] * p2mm
-    spVal = specTypeToValue(spType)
-    starData = getParams2(spVal)
-    starData[0] = getSize(spVal)
-    gList = createDef(spType, starData, dDict)
-    s = ' <g transform="matrix(%f,0,0,%f,%f,%f)">\n' % (scale, scale, starData[0] * pos[0] * scale,
-                                                        starData[0] * pos[1] * scale)
-    if ("NS" == spType or "BH" == spType):
-        s += '  <path style="fill:#ffffff;" d="m -4,-40 a 6.35,54.2 0 0 1 7,-7.5 l -2.8,48.5 z" transform="matrix(-0.8,0.6,-0.6,-0.8,0,0)" />'
-        scale = 1
-    s += '  <circle r="%f" fill="black"/>\n' % (starData[0] * 55.)
-    s += '  <circle r="%f" fill="url(#%s)"/>\n' % (starData[0] * 100., gList[0])
-    s += '  <circle r="%f" fill="url(#%s)"/>\n' % (starData[0] * 75., gList[1])
-    s += '  <circle r="%f" fill="url(#%s)"/>\n' % (starData[0] * 50., gList[2])
-    if ("NS" == spType or "BH" == spType):
-        s += '  <path style="fill:#ffffff;" d="m -4,-40 a 6.35,54.2 0 0 1 7,-7.5 l -2.8,48.5 z" transform="matrix(0.8,-0.6,0.6,0.8,0,0)" />'
-    s += ' </g>\n'
-    return s
-
-
-def getParams(spType):
-    return {
-        'O0': [0.75, ["#5579ff", "#1345ff", "#9cb2ff"]],  # TODO currently using B0 colors, get unique
-        'B0': [0.75, ["#5579ff", "#1345ff", "#9cb2ff"]],
-        'A0': [0.5, ["#688bff", "#2256ff", "#b9c9ff"]],
-        'F0III': [0.75, ["#9cb2ff", "#607aff", "#e0e4ff"]],
-        'G0III': [0.75, ["#fffcb6", "#fffa72", "#fff8fc"]],
-        'K0III': [0.75, ["#ffc58d", "#ff9228", "#ffeedd"]],
-        'M0III': [0.75, ["#ff9f41", "#ff7e00", "#ffc38b"]],
-        'F0I': [1, ["#9cb2ff", "#607aff", "#e0e4ff"]],
-        'G0I': [1, ["#fffcb6", "#fffa72", "#fff8fc"]],
-        'K0I': [1, ["#ffc58d", "#ff9228", "#ffeedd"]],
-        'M0I': [1, ["#ff9f41", "#ff7e00", "#ffc38b"]],
-        'F0': [0.5, ["#9cb2ff", "#607aff", "#e0e4ff"]],
-        'G0': [0.5, ["#fffcb6", "#fffa72", "#fff8fc"]],
-        'K0': [0.5, ["#ffc58d", "#ff9228", "#ffeedd"]],
-        'M0': [0.25, ["#ff9f41", "#ff7e00", "#ffc38b"]],
-        'BD': [0.20, ["#ff26b0", "#ff4000", "#ff64c8"]],
-        'WD': [0.25, ["#5579ff", "#1345ff", "#9cb2ff"]],
-        'NS': [0.375, ["#c86400", "#804000", "#ff8000"]],
-        'BH': [0.375, ["#0000ff", "#ff0000", "#000000"]],
-    }.get(spType, [0.25, ["rgM0a", "rgM0b", "rgM0c"]]);
-
-
-def getParams2(spType):
-    return {
-        500: [0.75, ["#5579ff", "#1345ff", "#9cb2ff"]],  # O0V #TODO currently using B0 colors, get unique
-        510: [0.75, ["#5579ff", "#1345ff", "#9cb2ff"]],  # B0V
-        520: [0.5, ["#688bff", "#2256ff", "#b9c9ff"]],  # A0V
-        330: [0.75, ["#9cb2ff", "#607aff", "#e0e4ff"]],  # F0III
-        340: [0.75, ["#fffcb6", "#fffa72", "#fff8fc"]],  # G0III
-        350: [0.75, ["#ffc58d", "#ff9228", "#ffeedd"]],  # K0III
-        360: [0.75, ["#ff9f41", "#ff7e00", "#ffc38b"]],  # M0III
-        370: [0.75, ["#ff6040", "#ff4000", "#ff8030"]],  # L0III (not real but needed for extrapolation)
-        130: [1, ["#9cb2ff", "#607aff", "#e0e4ff"]],  # F0I
-        140: [1, ["#fffcb6", "#fffa72", "#fff8fc"]],  # G0I
-        150: [1, ["#ffc58d", "#ff9228", "#ffeedd"]],  # K0I
-        160: [1, ["#ff9f41", "#ff7e00", "#ffc38b"]],  # M0I
-        170: [1, ["#ff6040", "#ff4000", "#ff8030"]],  # L0I (not real but needed for extrapolation)
-        530: [0.5, ["#9cb2ff", "#607aff", "#e0e4ff"]],  # F0V
-        540: [0.5, ["#fffcb6", "#fffa72", "#fff8fc"]],  # G0V
-        550: [0.5, ["#ffc58d", "#ff9228", "#ffeedd"]],  # K0V
-        560: [0.25, ["#ff9f41", "#ff7e00", "#ffc38b"]],  # M0V
-        570: [0.20, ["#ff6040", "#ff4000", "#ff8030"]],  # L0V
-        580: [0.20, ["#ff26b0", "#ff4000", "#ff64c8"]],  # BD
-        600: [0.25, ["#5579ff", "#1345ff", "#9cb2ff"]],  # WD
-        700: [0.375, ["#c86400", "#804000", "#ff8000"]],  # NS
-        800: [0.375, ["#0000ff", "#ff0000", "#000000"]],  # BH
-    }.get(spType, [0.25, ["rgM0a", "rgM0b", "rgM0c"]]);
-
-
-def specTypeToValue(sp):
-    if ("BD" == sp): return 580
-    if ("WD" == sp): return 600
-    if ("NS" == sp): return 700
-    if ("BH" == sp): return 800
-    specOrder = ["O", "B", "A", "F", "G", "K", "M"]
-    type = 10 * specOrder.index(sp[0:1])
-    type += int(sp[1:2])
-    spClass = sp[2:]
-    if ("" == spClass): return type + 500
-    if ("III" == spClass): return type + 300
-    if ("I" == spClass): return type + 100
-    if ("II" == spClass): return type + 200
-    if ("IV" == spClass): return type + 400
-
-
-def getSize(spVal):
-    val = spVal // 10 * 10
-    p = getParams2(val)
-    return p[0]
-
-
-def getBracketValues(spVal):
-    if (spVal >= 570): return (spVal, spVal)
-    low = int(spVal) // 10 * 10
-    return (low, low + 10)
-
-
-def sortSpecTypeForDisplay(st):
-    if ("BD" == st): return 2000
-    if ("WD" == st): return 1000
-    return specTypeToValue(st)
-
-
-# rank = {
-#	#supergiants
-#       'F0I': 30,
-#       'G0I': 40,
-#       'K0I': 50,
-#       'M0I': 60,
-#       #giants
-#       'F0III': 130,
-#       'G0III': 140,
-#       'K0III': 150,
-#       'M0III': 160,
-#       #main sequence
-#       'O0': 110,
-#       'B0': 120,
-#       'A0': 220,
-#       'F0': 230,
-#       'G0': 240,
-#       'K0': 250,
-#       'M0': 500,
-#	'M5': 550,
-#       #brown dwarfs
-#       'BD': 2000,
-#       #collapsars
-#       'WD': 1000,
-#       'NS': 400,
-#       'BH': 410,
-#   }
-# return rank[st]
 
 def writeDefs(f, dDict):
     f.write(" <defs>\n")
@@ -295,52 +77,6 @@ def findOverlaps(sList):
     return mulList
 
 
-def getTweakOffset(sList):
-    offset = (0, 0)
-    largeStarCount = 0
-    for s in sList:
-        if (sortSpecTypeForDisplay(s) < 560):
-            largeStarCount = largeStarCount + 1
-    nStars = len(sList)
-    t1 = (getStarOffsetList(nStars))[0]
-    temp = (0.5 * t1[0], 0.5 * t1[1])
-
-    if (1 == largeStarCount and nStars < 5):
-        offset = (-temp[0], -temp[1])
-
-    if (2 == largeStarCount and (3 == nStars or 4 == nStars)):
-        offset = (0, -temp[1])
-
-    if (3 == largeStarCount and (5 == nStars or 4 == nStars)):
-        offset = (0, -temp[1])
-
-    if (4 == nStars and largeStarCount < 3):
-        offset = (-0.5 * temp[0], -0.5 * temp[1])
-
-    if (nStars > 5 and 1 == largeStarCount):
-        offset = (-0.5 * temp[0], -0.5 * temp[1])
-
-    if (nStars > 7 and (2 == largeStarCount or 4 == largeStarCount or 5 == largeStarCount)):
-        offset = (-0.5 * temp[0], -0.5 * temp[1])
-
-    if ((6 == nStars or 7 == nStars) and 2 == largeStarCount):
-        offset = (0, -0.5 * temp[1])
-
-    if ((6 == nStars or 7 == nStars) and 3 == largeStarCount):
-        offset = (temp[0], -0.5 * temp[1])
-
-    if ((6 == nStars or 7 == nStars) and (4 == largeStarCount or 5 == largeStarCount)):
-        offset = (temp[0], 0)
-
-    if (nStars > 7 and 3 == largeStarCount):
-        offset = (temp[0], -0.5 * temp[1])
-
-    if (nStars > 7 and (6 == largeStarCount or 7 == largeStarCount)):
-        offset = (-0.5 * temp[0], 0)
-
-    return offset
-
-
 def createMapSymbols(
         p,
         systemList,
@@ -380,11 +116,11 @@ def createMapSymbols(
         starOffset = [(0, 0)]
 
         if system.nStars > 1:
-            starOffset = getStarOffsetList(
+            starOffset = get_star_offset_list(
                 system.nStars
             )
 
-            tweakOffset = getTweakOffset(
+            tweakOffset = get_tweak_offset(
                 system.stars
             )
 
@@ -438,11 +174,11 @@ def createMapSymbols(
 
         stars = sorted(
             system.stars,
-            key=sortSpecTypeForDisplay,
+            key=sort_spec_type_for_display,
         )
 
         for index, star in enumerate(stars):
-            data += createSymbol(
+            data += create_symbol(
                 p,
                 star,
                 starOffset[index],
@@ -472,46 +208,6 @@ def createMapSymbols(
         symbolList.append(data)
 
     return symbolList
-
-
-def getStarOffsetList(n):
-    """Offsets for stars in a system
-
-    This method returns a list of tuples based on the number of stars
-    in the system.  Each tuple represents the x,y offset of the star
-    from the system center for drawing purposes.
-
-    Input: n - the number of stars in the system
-
-    Output: a list of x,y pairs, one for each star in the system
-    """
-    if (2 == n):
-        return [(-24, -24), (24, 24)]
-    if (3 == n):
-        return [(-36, -36), (36, -20), (-12, 36)]
-    if (4 == n):
-        print("4 stars")
-        return [(-36, -36), (36, -36), (-36, 36), (36, 36)]
-    if (5 == n):
-        print("5 stars")
-        return [(-44, -20), (0, -48), (44, -20), (28, 32), (-28, 32)]
-    if (6 == n):
-        print("6 stars")
-        return [(-28, -48), (28, -48), (56, 0), (28, 48), (-28, 48), (-56, 0)]
-    if (7 == n):
-        print("7 stars")
-        return [(-28, -48), (28, -48), (56, 0), (28, 48), (-28, 48), (-56, 0), (0, 0)]
-    if (8 == n):
-        print("8 stars")
-        return [(-42, -42), (0, -60), (42, -42), (60, 0), (42, 42), (0, 60), (-42, 42), (-60, 0)]
-    if (9 == n):
-        print("9 stars")
-        return [(-42, -42), (0, -60), (42, -42), (60, 0), (42, 42), (0, 60), (-42, 42), (-60, 0), (0, 0)]
-    if (10 == n):
-        print("10 stars")
-        return [(-42, -42), (0, -60), (42, -42), (60, 0), (42, 42), (0, 60), (-42, 42), (-60, 0), (20, -20), (-20, 20)]
-    else:
-        return [(0, 0) * n]
 
 
 def writeMapHeader(f, w, h):
