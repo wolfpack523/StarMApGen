@@ -47,6 +47,12 @@ Benutzeroberfläche, Datenmodelle, Dateioperationen und SVG-Rendering sind
 nun klar voneinander getrennt, wodurch zukünftige Erweiterungen und
 Wartungsarbeiten erleichtert werden.
 
+## TODOs
+- Textexport für Systeminformationen und Planeten für Figma
+- Pasagen über mehrere Systeme hinweg darstellen
+- Planetentypen und Weltklassifizierungen hinzufügen, bearbeiten und löschen
+- Synchronisation von DAT-datein von verschiedenen Benutzern (Import/Export)
+- Versionsverwaltung für DAT-Dateien
 
 ## Bekannte Einschränkungen
 
